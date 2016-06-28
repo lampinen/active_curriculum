@@ -6,11 +6,11 @@ import matplotlib.pyplot as plot
 normalize = lambda x: numpy.array(x)/numpy.linalg.norm(x)
 
 true_weights = numpy.array([1/numpy.sqrt(2),1/numpy.sqrt(2)])
-easy_example = numpy.array([[10],[10]])
-easy_example2 = numpy.array([[-10],[-5]])
+easy_example = numpy.array([[6],[10]])
+easy_example2 = numpy.array([[-10],[1]])
 
-hard_example = numpy.array([[10],[-9]])
-hard_example2 = numpy.array([[-5],[4.3]])
+hard_example = numpy.array([[4],[-3.5]])
+hard_example2 = numpy.array([[-0.2],[0.1]])
 initial_weights = numpy.array([[1,-2],[2,-4],[3,-6],[4,-8],[5,-10]])
 
 
@@ -18,6 +18,8 @@ trial_tracks = []
 trial_magnitudes = []
 trial_final_errors = []
 trial_type = [i % 2 for i in xrange(10000)]
+initial_cosine_distance = [0 for i in xrange(10000/2)]
+delta_error = [0 for i in xrange(10000/2)]  
 
 #fig = plot.figure()
 #ax = fig.add_subplot(111)
@@ -51,6 +53,7 @@ for trial in xrange(10000): #(2*len(initial_weights)):
     trial_track.append((sess.run(W)))
 
     if trial % 2 == 0:
+	initial_cosine_distance[trial//2] = 1-numpy.dot(normalize(trial_track[-1]),true_weights)[0]
 	trial_magnitudes.append(numpy.linalg.norm(trial_track[-1]))
 
 	sess.run(train,feed_dict={input_ph: easy_example,target_ph: numpy.array([[1]])})
@@ -69,9 +72,11 @@ for trial in xrange(10000): #(2*len(initial_weights)):
 	sess.run(train,feed_dict={input_ph: easy_example,target_ph: numpy.array([[1]])})
 	trial_track.append((sess.run(W)))
 	sess.run(train,feed_dict={input_ph: easy_example2,target_ph: numpy.array([[-1]])})
+	delta_error[trial//2] = (1-numpy.dot(normalize(trial_track[-1]),true_weights)[0]) - trial_final_errors[-1] 
 
     trial_track.append((sess.run(W)))
     trial_final_errors.append(1-numpy.dot(normalize(trial_track[-1]),true_weights)[0])
+     
     sess.close()
     tf.reset_default_graph()
     trial_track = numpy.array(trial_track)
@@ -88,11 +93,19 @@ for trial in xrange(10000): #(2*len(initial_weights)):
 #plot.show()
 
 
-numpy.savetxt('trial_final_errors.csv',trial_final_errors)
-numpy.savetxt('trial_type.csv',trial_type)
-numpy.savetxt('trial_magnitudes.csv',trial_magnitudes)
+#numpy.savetxt('trial_final_errors.csv',trial_final_errors)
+#numpy.savetxt('trial_type.csv',trial_type)
+#numpy.savetxt('trial_magnitudes.csv',trial_magnitudes)
+numpy.savetxt('initial_cosine_distance_2.csv',initial_cosine_distance)
+numpy.savetxt('delta_error_2.csv',delta_error)
+
+#print numpy.corrcoef(trial_final_errors,trial_type)
+#plot.scatter(trial_magnitudes,trial_final_errors,c=trial_type)
+#plot.legend()
+#plot.show()
+
 
 print numpy.corrcoef(trial_final_errors,trial_type)
-plot.scatter(trial_magnitudes,trial_final_errors,c=trial_type)
-plot.legend()
+print numpy.corrcoef(initial_cosine_distance,delta_error)
+plot.scatter(initial_cosine_distance,delta_error)
 plot.show()
