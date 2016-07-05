@@ -10,7 +10,7 @@ ndim = 60
 nrelevantdim = 50
 nsamples = 200
 ntestsamples = 1000
-naveragingtrials = 500
+naveragingtrials = 100
 
 
 #network parameters
@@ -27,17 +27,12 @@ active2tracklength = 30
 active2numtopass = 28 #Must get this many of the track correct to proceed
 
 #For active3 network
-active3tracklength = 40
-active3_incorrect_limit = 20
-active3_backstep_size = 10
-
-
 
 def score(x_relevant):
     return (1+numpy.sign(numpy.dot(score_weights,x_relevant)))/2.0
 
 def easiness(x):
-    return -(score(x[:nrelevantdim])*2-1)*(numpy.dot(score_weights,x[:nrelevantdim])) # minus sign so that larger distances come earlier
+    return -(score(x[:nrelevantdim])*2-1)*(numpy.dot(score_weights,x[:nrelevantdim])) #/numpy.linalg.norm(x[:nrelevantdim]) # minus sign so that larger distances come earlier
     #return numpy.sum(x[nrelevantdim:] == 0.0)
 
 
@@ -60,7 +55,6 @@ active_dot_track = [0]*naveragingtrials
 active2_dot_track = [0]*naveragingtrials
 active3_dot_track = [0]*naveragingtrials
 
-
 #time spent in easier trials vs. initial angle between hyperplanes
 active_initial_dot_track = [0]*naveragingtrials
 active2_initial_dot_track = [0]*naveragingtrials
@@ -68,10 +62,24 @@ active_easy_examples_seen_track = [0]*naveragingtrials
 active2_easy_examples_seen_track = [0]*naveragingtrials
 
 
+##Is there any connection between curriculum and active 1 and 2 and the strategy of active 3?
+#standard_example_dot_track = numpy.zeros(nsamples)
+#curr_example_dot_track = numpy.zeros(nsamples)
+#active1_example_dot_track = numpy.zeros(nsamples)
+#active2_example_dot_track = numpy.zeros(nsamples)
+#active3_example_dot_track = numpy.zeros(nsamples)
+#
+##How do they progress?
+#full_dot_track = numpy.zeros(nsamples)
+#curr_full_dot_track = numpy.zeros(nsamples)
+#active1_full_dot_track = numpy.zeros(nsamples)
+#active2_full_dot_track = numpy.zeros(nsamples)
+#active3_full_dot_track = numpy.zeros(nsamples)
+
 for seed in xrange(naveragingtrials):
     print "On trial: "+str(seed)
     #seed = 1
-    tf.set_random_seed(seed+1) #attempt to be independent from previous test
+    tf.set_random_seed(seed+12345) #attempt to be independent from previous test
     numpy.random.seed(seed+1)
     #data
     score_weights = numpy.random.randn(nrelevantdim)
@@ -192,6 +200,7 @@ for seed in xrange(naveragingtrials):
 	    index = numpy.random.randint(chunk_size*chunk,chunk_size*(chunk+1)) 
 	sess.run(active_train,feed_dict={input_ph: sorted_x_data[index].reshape([ndim,1]),target_ph: sorted_y_data[index].reshape([1,1])})
 	active_examples_seen[chunk] = active_examples_seen[chunk]+1
+	return index
 
 
     #active2 curriculum stuff
@@ -206,22 +215,17 @@ for seed in xrange(naveragingtrials):
 	error = sess.run(active2_output_correct,feed_dict={input_ph: sorted_x_data[index].reshape([ndim,1]),target_ph: sorted_y_data[index].reshape([1,1])}) 
 	sess.run(active2_train,feed_dict={input_ph: sorted_x_data[index].reshape([ndim,1]),target_ph: sorted_y_data[index].reshape([1,1])}) #Could be more efficient than running these twice with a placeholder
 	active2_examples_seen[chunk] = active2_examples_seen[chunk]+1
-	return error
+	return error,index
 
     #active3 curriculum stuff
-    active3_example_track = []
-    active3_incorrect_track = [[0]*active3tracklength]
-    active3_example_pointer = [0]
+    active3_unseen_example_track = range(nsamples)
     def show_active3_example():
-	if sum(active3_incorrect_track[0]) >= active3_incorrect_limit: 
-	    active3_example_pointer[0] = max(active3_example_pointer[0]-active3_backstep_size,0)
-	    active3_incorrect_track[0] = [0]*active3tracklength
-	sess.run(active3_train,feed_dict={input_ph: sorted_x_data[active3_example_pointer[0]].reshape([ndim,1]),target_ph: sorted_y_data[active3_example_pointer[0]].reshape([1,1])}) 
-    	correct = sess.run(active3_output_correct,feed_dict={input_ph: sorted_x_data[active3_example_pointer[0]].reshape([ndim,1]),target_ph: sorted_y_data[active3_example_pointer[0]].reshape([1,1])})
-	active3_incorrect_track[0].append(1-correct)
-	active3_incorrect_track[0].pop(0)
-	active3_example_track.append(active3_example_pointer[0])
-	active3_example_pointer[0] += 1
+	curr_weights = sess.run(active3_W1)
+	#dists = map(lambda i: (1-numpy.dot(score_weights,sorted_x_data[i,:nrelevantdim])/(numpy.linalg.norm(score_weights)*numpy.linalg.norm(sorted_x_data[i,:nrelevantdim])))*numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[i])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[i]))),active3_unseen_example_track)			
+	dists = map(lambda i: numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[i])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[i]))),active3_unseen_example_track)			
+	index = active3_unseen_example_track.pop(numpy.argmin(dists))
+	sess.run(active3_train,feed_dict={input_ph: sorted_x_data[index].reshape([ndim,1]),target_ph: sorted_y_data[index].reshape([1,1])}) 
+	return index
 
     def calculate_train_subset_error_rate(): 
 	"""Calculates error rates of the active network on this chunk"""
@@ -239,23 +243,45 @@ for seed in xrange(naveragingtrials):
     #training
     for sample in xrange(nsamples):
 	sess.run(train,feed_dict={input_ph: sorted_x_data[sample].reshape([ndim,1]),target_ph: sorted_y_data[sample].reshape([1,1])})
+#	curr_weights = sess.run(W1)
+#	curr_example_dot_track[sample] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[sample])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[sample])))
 	sess.run(standard_train,feed_dict={input_ph: x_data[sample].reshape([ndim,1]),target_ph: y_data[sample].reshape([1,1])})
+#	curr_weights = sess.run(standard_W1)
+#	standard_example_dot_track[sample] += numpy.abs(numpy.dot(curr_weights[0],x_data[sample])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(x_data[sample])))
 	sess.run(standard2_train,feed_dict={input_ph: standard2_x_data[sample].reshape([ndim,1]),target_ph: standard2_y_data[sample].reshape([1,1])})
 	#Active training
 	if (active_chunks_passed < nactivechunks-1) and (sample % active_sample_test_period == 0): 
 	    active_error = calculate_train_subset_error_rate()
 	    if active_error < active_error_threshold or (active_examples_seen[active_chunks_passed] > 0.5*nsamples):
 		active_chunks_passed += 1
-	show_active_example(active_chunks_passed)
+	a_index = show_active_example(active_chunks_passed)
+#	curr_weights = sess.run(active_W1)
+#	active1_example_dot_track[sample] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
 	#Active2 training
 	if  (active2_chunks_passed < nactivechunks-1) and (sum(active2_last_n) >= active2numtopass or  (active2_examples_seen[active2_chunks_passed] > 0.5*nsamples)): 
 	    active2_chunks_passed += 1
 	    active2_last_n = [0]*active2tracklength
-	this_a2_error = show_active2_example(active2_chunks_passed)
+	this_a2_error,a_index = show_active2_example(active2_chunks_passed)
 	active2_last_n.pop(0)
 	active2_last_n.append(1-this_a2_error)
+#	curr_weights = sess.run(active2_W1)
+#	active2_example_dot_track[sample] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
 	#Active3 training
-	show_active3_example()
+	a_index = show_active3_example()
+#	curr_weights = sess.run(active3_W1)
+#	active3_example_dot_track[sample] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
+
+#	#Plot progression of weights
+#	these_weights = sess.run(standard_W1[0,:nrelevantdim])
+#	full_dot_track[sample] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
+#	these_weights = sess.run(W1[0,:nrelevantdim])
+#	curr_full_dot_track[sample] += numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
+#	these_weights = sess.run(active_W1[0,:nrelevantdim])
+#	active1_full_dot_track[sample] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
+#	these_weights = sess.run(active2_W1[0,:nrelevantdim])
+#	active2_full_dot_track[sample] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
+#	these_weights = sess.run(active3_W1[0,:nrelevantdim])
+#	active3_full_dot_track[sample] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
 	
 
     errors = calculate_error_rates()
@@ -282,7 +308,6 @@ for seed in xrange(naveragingtrials):
 
     print("Active example counts: ", active_examples_seen)
     print("Active2 example counts: ", active2_examples_seen)
-    print("Active3 example track: ",active3_example_track)
     active_easy_examples_seen_track[seed] = active_examples_seen[0]+active_examples_seen[1]
     active2_easy_examples_seen_track[seed] = active2_examples_seen[0]+active2_examples_seen[1]
     sess.close()
@@ -314,6 +339,38 @@ plot.ylabel('# easy samples seen')
 plot.legend()
 plot.show()
 
+#Progression of the weights
+#full_dot_track /= naveragingtrials
+#curr_full_dot_track /= naveragingtrials
+#active1_full_dot_track /= naveragingtrials
+#active2_full_dot_track /= naveragingtrials
+#active3_full_dot_track /= naveragingtrials
+#
+#plot.plot(range(nsamples),full_dot_track,label='Standard')
+#plot.plot(range(nsamples),curr_full_dot_track,label='Curriculum')
+#plot.plot(range(nsamples),active1_full_dot_track,label='Act. 1')
+#plot.plot(range(nsamples),active2_full_dot_track,label='Act. 2')
+#plot.plot(range(nsamples),active3_full_dot_track,label='Act. 3')
+#plot.legend()
+#plot.xlabel('examples seen')
+#plot.ylabel('Weight vec. dot value')
+#plot.show()
+#
+#
+#standard_example_dot_track /= naveragingtrials
+#curr_example_dot_track /= naveragingtrials
+#active1_example_dot_track /= naveragingtrials
+#active2_example_dot_track /= naveragingtrials
+#active3_example_dot_track /= naveragingtrials  
+#plot.plot(range(200),standard_example_dot_track,label='Non-Curr.')
+#plot.plot(range(200),curr_example_dot_track,label='Curr.')
+#plot.plot(range(200),active1_example_dot_track,label='active1')
+#plot.plot(range(200),active2_example_dot_track,label='active2')
+#plot.plot(range(200),active3_example_dot_track,label='active3')
+#plot.legend()
+#plot.xlabel('training example')
+#plot.ylabel('example dot current weights')
+#plot.show()
 
 #standard_error_track = numpy.array(standard_error_track)
 #standard2_error_track = numpy.array(standard2_error_track)
