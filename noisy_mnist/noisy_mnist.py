@@ -8,24 +8,31 @@ from tensorflow.examples.tutorials.mnist import input_data
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
 #####Parameters
-size_clean_chunk = 2000
-size_light_chunk = 4000
-size_med_chunk = 4000
+chunk_size = 2000
 light_theta = 0.1
-med_theta = 0.2
-heavy_theta = 0.3
+med_theta = 0.3
+heavy_theta = 0.5
 
 batch_size = 50
+eta = 0.001
+
+#active curriculum parameters
+ac_acc_track_length = 20
+ac_avg_acc_threshold = 0.95
 
 #####
-begin_light_chunk = size_clean_chunk
-begin_med_chunk = begin_light_chunk+size_light_chunk
-begin_heavy_chunk = begin_med_chunk+size_med_chunk
+
+begin_light_chunk = chunk_size 
+begin_med_chunk = begin_light_chunk + chunk_size
+begin_heavy_chunk = begin_med_chunk + chunk_size
+
+batches_per_chunk = chunk_size//batch_size
+batches_final_chunk = (55000-begin_heavy_chunk)//batch_size
 
 numpy.random.seed(1)
 tf.set_random_seed(1)
 
-standard_order = numpy.random.permutation(len(mnist.train.images)) #first size_clean_chunk images will be clean, etc. 
+standard_order = numpy.random.permutation(len(mnist.train.images)) #first chunk_size images will be clean, etc., so mix them up for the standard net 
 
 
 #noise for mnist
@@ -85,10 +92,9 @@ s_h_fc1_drop = tf.nn.dropout(s_h_fc1, keep_prob)
 s_y_conv=tf.nn.softmax(tf.matmul(s_h_fc1_drop, s_W_fc2) + s_b_fc2)
 
 s_cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(s_y_conv), reduction_indices=[1]))
-s_train_step = tf.train.AdamOptimizer(1e-4).minimize(s_cross_entropy)
+s_train_step = tf.train.AdamOptimizer(eta).minimize(s_cross_entropy)
 s_correct_prediction = tf.equal(tf.argmax(s_y_conv,1), tf.argmax(y_,1))
 s_accuracy = tf.reduce_mean(tf.cast(s_correct_prediction, tf.float32))
-
 
 #curriculum
 c_W_conv1 = tf.Variable(s_W_conv1.initialized_value()) 
@@ -110,9 +116,37 @@ c_h_fc1_drop = tf.nn.dropout(c_h_fc1, keep_prob)
 c_y_conv=tf.nn.softmax(tf.matmul(c_h_fc1_drop, c_W_fc2) + c_b_fc2)
 
 c_cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(c_y_conv), reduction_indices=[1]))
-c_train_step = tf.train.AdamOptimizer(1e-4).minimize(c_cross_entropy)
+c_train_step = tf.train.AdamOptimizer(eta).minimize(c_cross_entropy)
 c_correct_prediction = tf.equal(tf.argmax(c_y_conv,1), tf.argmax(y_,1))
 c_accuracy = tf.reduce_mean(tf.cast(c_correct_prediction, tf.float32))
+
+#active_curriculum
+ac_W_conv1 = tf.Variable(s_W_conv1.initialized_value()) 
+ac_b_conv1 = tf.Variable(s_b_conv1.initialized_value())  
+ac_W_conv2 = tf.Variable(s_W_conv2.initialized_value())  
+ac_b_conv2 = tf.Variable(s_b_conv2.initialized_value())  
+ac_W_fc1 = tf.Variable(s_W_fc1.initialized_value())
+ac_b_fc1 = tf.Variable(s_b_fc1.initialized_value())
+ac_W_fc2 = tf.Variable(s_W_fc2.initialized_value())
+ac_b_fc2 = tf.Variable(s_b_fc2.initialized_value())
+
+ac_h_conv1 = tf.nn.relu(conv2d(x_image, ac_W_conv1) + ac_b_conv1)
+ac_h_pool1 = max_pool_2x2(ac_h_conv1)
+ac_h_conv2 = tf.nn.relu(conv2d(ac_h_pool1, ac_W_conv2) + ac_b_conv2)
+ac_h_pool2 = max_pool_2x2(ac_h_conv2)
+ac_h_pool2_flat = tf.reshape(ac_h_pool2, [-1, 7*7*64])
+ac_h_fc1 = tf.nn.relu(tf.matmul(ac_h_pool2_flat, ac_W_fc1) + ac_b_fc1)
+ac_h_fc1_drop = tf.nn.dropout(ac_h_fc1, keep_prob)
+ac_y_conv=tf.nn.softmax(tf.matmul(ac_h_fc1_drop, ac_W_fc2) + ac_b_fc2)
+
+ac_cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(ac_y_conv), reduction_indices=[1]))
+ac_train_step = tf.train.AdamOptimizer(eta).minimize(ac_cross_entropy)
+ac_correct_prediction = tf.equal(tf.argmax(ac_y_conv,1), tf.argmax(y_,1))
+ac_accuracy = tf.reduce_mean(tf.cast(ac_correct_prediction, tf.float32))
+
+ac_accuracy_track = [0.]*ac_acc_track_length 
+ac_curr_chunk = 0
+ac_ex_i = 0
 
 
 
@@ -129,13 +163,47 @@ for i in range(len(mnist.train.images)//batch_size):
     train_accuracy = c_accuracy.eval(feed_dict={
         x:batch_x, y_: batch_y, keep_prob: 1.0})
     print("step %d, curriculum training accuracy %g"%(i, train_accuracy))
+    train_accuracy = ac_accuracy.eval(feed_dict={
+        x:batch_x, y_: batch_y, keep_prob: 1.0})
+    print("step %d, active curriculum training accuracy %g, on chunk %i"%(i, train_accuracy,ac_curr_chunk))
   s_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
   #curriculum
   batch_x = mnist.train.images[batch_size*i:batch_size*(i+1)]
   batch_y = mnist.train.labels[batch_size*i:batch_size*(i+1)]
   c_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
+  #active_curriculum
+  if ac_curr_chunk == 4: #Refresh earlier stuff if done
+	this_chunk = 0 if (ac_curr_chunk == 0) else numpy.random.randint(0,ac_curr_chunk) 
+	if this_chunk < 3:
+	    offset = this_chunk*chunk_size+numpy.random.randint(0,batches_per_chunk)*batch_size
+	else:
+	    offset = this_chunk*chunk_size+numpy.random.randint(0,batches_final_chunk)*batch_size
+	batch_x = mnist.train.images[offset:offset+batch_size]
+	batch_y = mnist.train.labels[offset:offset+batch_size]
+  elif ac_ex_i < batches_per_chunk:
+	offset = ac_curr_chunk*chunk_size+ac_ex_i*batch_size
+	batch_x = mnist.train.images[offset:offset+batch_size]
+	batch_y = mnist.train.labels[offset:offset+batch_size]
+  else: 
+	offset = ac_curr_chunk*chunk_size+numpy.random.randint(0,batches_per_chunk)*batch_size
+	batch_x = mnist.train.images[offset:offset+batch_size]
+	batch_y = mnist.train.labels[offset:offset+batch_size]
+  ac_curr_accuracy = ac_accuracy.eval(feed_dict={
+    x:batch_x, y_: batch_y, keep_prob: 1.0})
+  ac_accuracy_track.append(ac_curr_accuracy)
+  ac_accuracy_track.pop(0)
+  ac_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
+  ac_ex_i += 1
+  
+  
+  if ac_curr_chunk < 4 and sum(ac_accuracy_track)/ac_acc_track_length >= ac_avg_acc_threshold: #active proceed?
+    ac_curr_chunk = ac_curr_chunk+1
+    ac_accuracy_track = [0.]*ac_acc_track_length 
+    ac_ex_i = 0
 
 print("standard test accuracy %g"%s_accuracy.eval(feed_dict={
     x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
 print("curriculum test accuracy %g"%c_accuracy.eval(feed_dict={
+    x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
+print("active curriculum test accuracy %g"%ac_accuracy.eval(feed_dict={
     x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
