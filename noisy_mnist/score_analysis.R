@@ -3,13 +3,17 @@ library(dplyr)
 library(tidyr)
 
 s_scores = read.csv('s_scores_ttss_10000_cs_200_batch_50_actl_4_acaat_0.950000.csv')
-c_scores = read.csv('c_scores_ttss_10000_cs_200_batch_50_actl_4_acaat_0.950000.csv')
+c_scores = read.csv('c_scores_ttss_10000_cs_200_batch_50_actl_4_acaat_0.950000.csv')        
 ac_scores = read.csv('ac_scores_ttss_10000_cs_200_batch_50_actl_4_acaat_0.950000.csv')
 
 d = data.frame(accuracy = c(s_scores$accuracy,c_scores$accuracy,ac_scores$accuracy),condition=rep(c('standard','curriculum','active curriculum'),each=length(s_scores$accuracy)),trial=rep(1:length(s_scores$accuracy),3))
 
 ggplot(data=d,aes(x=condition,y=accuracy,color=condition)) +
   geom_point() +
+  theme_bw()
+
+ggplot(data=d,aes(x=condition,y=accuracy,fill=condition)) +
+  geom_violin() +
   theme_bw()
 
 d_deltas = d %>% spread(condition,accuracy) %>% mutate(delta = `active curriculum`-curriculum)
