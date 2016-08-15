@@ -9,10 +9,10 @@ from tensorflow.examples.tutorials.mnist import input_data
 #chunk = 100/200, acc_track_length = 2/4, acc_threshold = 0.9/0.9
 
 #####Parameters
-chunk_size = 500
-light_theta = 0.2
-med_theta = 0.4
-heavy_theta = 0.6
+chunk_size = 200
+light_theta = 0.22
+med_theta = 0.44
+heavy_theta = 0.66
 
 batch_size = 50
 eta = 0.001
