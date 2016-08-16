@@ -50,7 +50,7 @@ for seed in xrange(naveragingtrials):
 
     #noise for mnist
     def noise(M,theta): 
-	"""M a matrix, theta a parameter controlling noise (heavy noise but still some possibility of discrimination is around theta = 0.33), uses both binary noise and gaussian."""
+	"""M a matrix, theta a parameter controlling noise, uses both binary noise and gaussian."""
 	s = numpy.shape(M)
 	return numpy.clip(M+numpy.random.binomial(1,theta,s)+theta*numpy.random.standard_normal(s),0,1)
 
