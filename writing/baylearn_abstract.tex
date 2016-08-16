@@ -1,0 +1,114 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2016
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2016}
+
+\usepackage[nonatbib]{nips_2016}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+% \usepackage[final]{nips_2016}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{subcaption}
+\usepackage{graphicx}
+
+\title{An active approach to curriculum learning}
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+
+\author{
+  Andrew Lampinen\thanks{\url{http://web.stanford.edu/\~lampinen/}}  \\
+  Department of Psychology\\
+  Stanford University\\
+  Stanford, CA 94305 \\
+  \texttt{lampinen@stanford.edu} \\
+  \And
+  James L. McClelland \\
+  Department of Psychology\\
+  Stanford University\\
+  Stanford, CA 94305 \\
+  \texttt{jlm@stanford.edu} \\
+}
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+%%\begin{abstract}
+%%Learning neural network parameters is a highly non-convex optimization problem. Given the difficulty of creating and labeling large datasets, it is important to be able to extract as much knowledge as possible from a dataset. A variety of strategies have been proposed for getting more information from a dataset, such as curriculum learning and active learning. Here, we propose a simple, efficient combination of these that yields significant improvements.
+%%\end{abstract}
+
+\section{Introduction \& background}
+One of the fundamental problems of machine learning is that of ``small'' data. Even a dataset as large as ImageNet 
+%%\cite{Deng2009} 
+is very sparse relative to the space of natural visual images. Building and labelling large datasets is a labor-intensive endeavor. Thus in deep learning it is essential to squeeze as much information as possible from a training dataset. Here, we propose a way of bringing together two methods for getting more from a training dataset: curriculum learning and active learning.\par
+\textbf{Curriculum learning:} In an influential paper from 2009 \cite{Bengio2009}, Bengio and colleagues presented evidence that ordering the training exemplars in a principled way could improve learning on difficult tasks.  
+%%They demonstrated that beginning with simpler examples and progressing to more difficult ones could substantially improve performance on problems from several domains. 
+%%Since then, this approach has proven essential on a variety of complex task (e.g. \cite{Zaremba2014}).
+\par
+\textbf{Active learning:} There has also been a long history of work on the idea of active learning (e.g. \cite{Fukumizu2000}), which allows the training algorithm to account for the vagaries of network initializations. However, in general active learning strategies are slow, because the process of actively selecting exemplars involves searching over the training data using some optimality criterion.\par
+\textbf{Self-paced curriculum learning:} Jiang and colleagues \cite{Jiang2015} have proposed a hybrid family of strategies for self-paced curriculum learning, that inherit some of the beneficial characteristics of both strategies. However, their method still requires the expensive optimization of both exemplar choices and model parameters in alternating steps. We propose a simpler method and demonstrate its efficacy. 
+\section{An approach to active curriculum learning}
+We suggest that insofar as a curriculum encapsulates some knowledge about how the training data should progress, it allows for much more efficient active approaches to training, because we can be ``active'' at the more abstract level of the curriculum rather than at the detailed level of the individual data, which leads to substantially more efficient strategies. We propose the following (extremely simple) heuristic approach to actively learning from a curriculum:
+\vspace{-0.5em}
+\begin{enumerate}
+\setlength\itemsep{0em}
+\item Order the training data according to your curriculum, and divide them into chunks, either arbitrarily or according to the structure of the curriculum.
+\item Proceed from one chunk to the next once the running average accuracy on the last $n$ training examples is below some threshold. (Optional: randomly incorporate examples from other chunks at a low rate to reduce overfitting)%% cf. \cite{Zaremba2014}
+
+\end{enumerate} 
+\vspace{-0.5em}
+This allows the optimizer to guide each network through a more uniform path in function space, thus improving both overall performance (even over using a standard curriculum strategy), and improving the consistency of results by ensuring that the network does not get examples it is not prepared to incorporate. Furthermore, it is efficient because it only requires computation of the accuracy on training examples, which must be computed anyway to calculate the gradients. Below, we show an empirical demonstration of the effectiveness of this strategy.
+\section{Experiment: noisy MNIST}
+\begin{figure}
+\centering
+\begin{subfigure}{0.45\textwidth}
+\centering
+\includegraphics[width=\textwidth]{noisy_mnist_7.png}
+\caption{Noisy MNIST image of a 7}
+\label{noisymnist}
+\end{subfigure}
+~
+\begin{subfigure}{0.5\textwidth}
+\centering
+\includegraphics[width=\textwidth]{noisy_mnist_066_55000_accuracy.png}
+\caption{Test accuracy by training strategy (100 independent trials, dashed line denotes chance)}
+\label{accuracyfig}
+\end{subfigure}
+\caption{Noisy MNIST example and results}
+\end{figure}
+We created a noisy version of the MNIST testing data by adding both binomial ($\theta = 0.66$) and gaussian ($\sigma=0.66$) noise to the MNIST images and clipping them to the range $[0,1]$. See \ref{noisymnist} for an example image. We left 200 training images clean, added a small amount of noise to 200 ($\theta = \sigma = 0.22$), and a medium amount of noise to another 200 ($\theta = \sigma = 0.44$). For the remaining training images we added the heavy noise ($\theta = \sigma = 0.66$), just like the testing data. \par
+We used the neural network architecture of TensorFlow's demonstration convolutional network for MNIST (ReLU non-linearities, two convolutional and pooling layers, convolutional filter size 5x5, stride 1, pooling size 2x2, one fully-connected layer with dropout, and a final readout fully-connected softmax layer). We trained the network using the Adam algorithm with the suggested parameters $\alpha = 0.001, \beta_1 = 0.9, \beta_2 = 0.999, \epsilon = 10^{-8}$, and a batch size of 50. Our results are computed over 100 random initilizations of the networks and generations of the dataset.\par
+We used three strategies for training the networks: non-curriculum training, where the data were presented in a random order ignoring the fact that some data were cleaner; curriculum training, where first the clean chunk was presented, then the light noise chunk, medium noise, and the remaining training examples; and active curriculum training by the above procedure, where the network was required to reach a running accuracy of 0.95 on the previous 4 batches to proceed to the next chunk.\par 
+\subsection{Results}
+See \ref{accuracyfig} for the results. The network trained without a curriculum consistently performed poorly, with an average test accuracy of 22.1\%. The curriculum trained network performed much better on average, with an average test accuracy of 69.8\%, but performed worse than the standard training strategy on 13/100 trials. The network trained with an active curriculum performed better than either of the other networks, with an average test accuracy of 77.1\% (statistically significant improvement over the curriculum network, using a paired $t$-test $t(99) = 12.7$, $p = 2.2\cdot 10^{-16}$). Furthermore, on every trial the active curriculum network matched or exceeded the performance of the other two networks, and its performance was more consistent trial to trial.\par
+These results suggest that using active curriculum strategies to train neural networks may be a computationally cheap way to achieve better, more consistent results. 
+%%\subsubsection*{Acknowledgments}
+%%
+%%Use unnumbered third level headings for the acknowledgments. All
+%%acknowledgments go at the end of the paper. Do not include
+%%acknowledgments in the anonymized submission, only in the final paper.
+{\small
+\bibliography{baylearn_abstract}
+\bibliographystyle{acm}}
+\end{document}
