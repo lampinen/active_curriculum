@@ -58,7 +58,8 @@ for seed in xrange(naveragingtrials):
     mnist.train.images[begin_light_chunk:begin_med_chunk] = noise(mnist.train.images[begin_light_chunk:begin_med_chunk],light_theta)
     mnist.train.images[begin_med_chunk:begin_heavy_chunk] = noise(mnist.train.images[begin_med_chunk:begin_heavy_chunk],med_theta)
     mnist.train.images[begin_heavy_chunk:] = noise(mnist.train.images[begin_heavy_chunk:],heavy_theta)
-    #add noise to testing data
+    #add noise to testing and validation data
+    mnist.validation.images[:] = noise(mnist.validation.images[:],heavy_theta)
     mnist.test.images[:] = noise(mnist.test.images[:],heavy_theta)
 
 
@@ -166,9 +167,18 @@ for seed in xrange(naveragingtrials):
     sess = tf.InteractiveSession()
     sess.run(tf.initialize_all_variables())
 
-    for i in range(total_training_set_size//batch_size):
-      batch_x = mnist.train.images[standard_order[batch_size*i:batch_size*(i+1)]]
-      batch_y = mnist.train.labels[standard_order[batch_size*i:batch_size*(i+1)]]
+    #for i in range(total_training_set_size//batch_size):
+    nbatches = total_training_set_size//batch_size
+    best_s_val = 0.0
+    best_c_val = 0.0
+    best_ac_val = 0.0
+    best_s_score = 0.0
+    best_c_score = 0.0
+    best_ac_score = 0.0
+    for i in range(20000):
+      i_mod = i % nbatches
+      batch_x = mnist.train.images[standard_order[batch_size*i_mod:batch_size*(i_mod+1)]]
+      batch_y = mnist.train.labels[standard_order[batch_size*i_mod:batch_size*(i_mod+1)]]
 #      if i%100 == 0:
 #	train_accuracy = s_accuracy.eval(feed_dict={
 #	    x:batch_x, y_: batch_y, keep_prob: 1.0})
@@ -181,11 +191,11 @@ for seed in xrange(naveragingtrials):
 #	print("step %d, active curriculum training accuracy %g, on chunk %i"%(i, train_accuracy,ac_curr_chunk))
       s_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0})
       #curriculum
-      batch_x = mnist.train.images[batch_size*i:batch_size*(i+1)]
-      batch_y = mnist.train.labels[batch_size*i:batch_size*(i+1)]
+      batch_x = mnist.train.images[batch_size*i_mod:batch_size*(i_mod+1)]
+      batch_y = mnist.train.labels[batch_size*i_mod:batch_size*(i_mod+1)]
     #  c_curr_accuracy = c_accuracy.eval(feed_dict={
     #    x:batch_x, y_: batch_y, keep_prob: 1.0}) 
-    #  print("c",batch_size*i,batch_size*(i+1),c_curr_accuracy)
+    #  print("c",batch_size*i_mod,batch_size*(i_mod+1),c_curr_accuracy)
       c_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
       #active_curriculum
 #      if numpy.random.random() < 0.1: #Refresh earlier stuff 
@@ -201,7 +211,10 @@ for seed in xrange(naveragingtrials):
 	    batch_x = mnist.train.images[offset:offset+batch_size]
 	    batch_y = mnist.train.labels[offset:offset+batch_size]
       else: 
-	    offset = ac_curr_chunk*chunk_size+numpy.random.randint(0,batches_per_chunk)*batch_size
+	    if ac_curr_chunk == 3:
+		offset = ac_curr_chunk*chunk_size+numpy.random.randint(0,batches_final_chunk)*batch_size
+	    else:
+		offset = ac_curr_chunk*chunk_size+numpy.random.randint(0,batches_per_chunk)*batch_size
 	    batch_x = mnist.train.images[offset:offset+batch_size]
 	    batch_y = mnist.train.labels[offset:offset+batch_size]
       ac_curr_accuracy = ac_accuracy.eval(feed_dict={
@@ -214,14 +227,30 @@ for seed in xrange(naveragingtrials):
       
       
       if ac_curr_chunk < 3 and sum(ac_accuracy_track)/ac_acc_track_length >= ac_avg_acc_threshold: #active proceed?
-	print "advancing ",i,ac_curr_chunk
 	ac_curr_chunk = ac_curr_chunk+1
 	ac_accuracy_track = [0.]*ac_acc_track_length 
 	ac_ex_i = 0
 
-    s_scores.append(s_accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
-    c_scores.append(c_accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
-    ac_scores.append(ac_accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
+      if i % 100 == 0:
+	    this_val = s_accuracy.eval(feed_dict={x: mnist.validation.images, y_: mnist.validation.labels, keep_prob: 1.0})
+	    if this_val > best_s_val:
+		best_s_val = this_val
+		best_s_score = s_accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
+
+	    this_val = c_accuracy.eval(feed_dict={x: mnist.validation.images, y_: mnist.validation.labels, keep_prob: 1.0})
+	    if this_val > best_c_val:
+		best_c_val = this_val
+		best_c_score = c_accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
+
+	    this_val = ac_accuracy.eval(feed_dict={x: mnist.validation.images, y_: mnist.validation.labels, keep_prob: 1.0})
+	    if this_val > best_ac_val:
+		best_ac_val = this_val
+		best_ac_score = ac_accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
+
+
+    s_scores.append(best_s_score)
+    c_scores.append(best_c_score)
+    ac_scores.append(best_ac_score)
     print("standard test accuracy %g"%s_scores[-1])
     print("curriculum test accuracy %g"%c_scores[-1])
     print("active curriculum test accuracy %g"%ac_scores[-1])
