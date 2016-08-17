@@ -214,6 +214,7 @@ for seed in xrange(naveragingtrials):
       
       
       if ac_curr_chunk < 3 and sum(ac_accuracy_track)/ac_acc_track_length >= ac_avg_acc_threshold: #active proceed?
+	print "advancing ",i,ac_curr_chunk
 	ac_curr_chunk = ac_curr_chunk+1
 	ac_accuracy_track = [0.]*ac_acc_track_length 
 	ac_ex_i = 0
