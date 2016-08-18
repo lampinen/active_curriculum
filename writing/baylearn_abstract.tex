@@ -41,12 +41,12 @@
   Stanford University\\
   Stanford, CA 94305 \\
   \texttt{lampinen@stanford.edu} \\
-  \And
-  James L. McClelland \\
-  Department of Psychology\\
-  Stanford University\\
-  Stanford, CA 94305 \\
-  \texttt{jlm@stanford.edu} \\
+%%  \And
+%%  James L. McClelland \\
+%%  Department of Psychology\\
+%%  Stanford University\\
+%%  Stanford, CA 94305 \\
+%%  \texttt{jlm@stanford.edu} \\
 }
 
 \begin{document}
@@ -61,20 +61,20 @@
 \section{Introduction \& background}
 One of the fundamental problems of machine learning is that of ``small'' data. Even a dataset as large as ImageNet 
 %%\cite{Deng2009} 
-is very sparse relative to the space of natural visual images. Building and labelling large datasets is a labor-intensive endeavor. Thus in deep learning it is essential to squeeze as much information as possible from a training dataset. Here, we propose a way of bringing together two methods for getting more from a training dataset: curriculum learning and active learning.\par
-\textbf{Curriculum learning:} In an influential paper from 2009 \cite{Bengio2009}, Bengio and colleagues presented evidence that ordering the training exemplars in a principled way could improve learning on difficult tasks.  
+is very sparse relative to the space of natural visual images. Building and labelling large datasets is a labor-intensive endeavor. Thus in deep learning it is essential to squeeze as much information as possible from a training dataset. Here, we propose a way of bringing together two methods for getting more out of a training dataset: curriculum learning and active learning.\par
+\textbf{Curriculum learning:} In an influential paper from 2009 \cite{Bengio2009}, Bengio and colleagues presented evidence that ordering the training exemplars in a principled way could improve learning. 
 %%They demonstrated that beginning with simpler examples and progressing to more difficult ones could substantially improve performance on problems from several domains. 
 %%Since then, this approach has proven essential on a variety of complex task (e.g. \cite{Zaremba2014}).
 \par
 \textbf{Active learning:} There has also been a long history of work on the idea of active learning (e.g. \cite{Fukumizu2000}), which allows the training algorithm to account for the vagaries of network initializations. However, in general active learning strategies are slow, because the process of actively selecting exemplars involves searching over the training data using some optimality criterion.\par
-\textbf{Self-paced curriculum learning:} Jiang and colleagues \cite{Jiang2015} have proposed a hybrid family of strategies for self-paced curriculum learning, that inherit some of the beneficial characteristics of both strategies. However, their method still requires the expensive optimization of both exemplar choices and model parameters in alternating steps. We propose a simpler method and demonstrate its efficacy. 
+\textbf{Self-paced curriculum learning:} Jiang and colleagues \cite{Jiang2015} have proposed a family of hybrid strategies for self-paced curriculum learning that inherit some of the beneficial characteristics of both strategies. However, their method still requires the expensive optimization of both exemplar choices and model parameters in alternating steps. We propose a simpler method and demonstrate its efficacy. 
 \section{An approach to active curriculum learning}
 We suggest that insofar as a curriculum encapsulates some knowledge about how the training data should progress, it allows for much more efficient active approaches to training, because we can be ``active'' at the more abstract level of the curriculum rather than at the detailed level of the individual data, which leads to substantially more efficient strategies. We propose the following (extremely simple) heuristic approach to actively learning from a curriculum:
 \vspace{-0.5em}
 \begin{enumerate}
 \setlength\itemsep{0em}
 \item Order the training data according to your curriculum, and divide them into chunks, either arbitrarily or according to the structure of the curriculum.
-\item Proceed from one chunk to the next once the running average accuracy on the last $n$ training examples is below some threshold. (Optional: randomly incorporate examples from other chunks at a low rate to reduce overfitting)%% cf. \cite{Zaremba2014}
+\item Proceed from one chunk to the next once the running average accuracy on the last $n$ training examples is below some threshold. (Optional: randomly incorporate examples from other chunks at a low rate to reduce overfitting to the current chunk.)%% cf. \cite{Zaremba2014}
 
 \end{enumerate} 
 \vspace{-0.5em}
@@ -97,12 +97,11 @@ This allows the optimizer to guide each network through a more uniform path in f
 \end{subfigure}
 \caption{Noisy MNIST example and results}
 \end{figure}
-We created a noisy version of the MNIST testing data by adding both binomial ($\theta = 0.66$) and gaussian ($\sigma=0.66$) noise to the MNIST images and clipping them to the range $[0,1]$. See \ref{noisymnist} for an example image. We left 200 training images clean, added a small amount of noise to 200 ($\theta = \sigma = 0.22$), and a medium amount of noise to another 200 ($\theta = \sigma = 0.44$). For the remaining training images we added the heavy noise ($\theta = \sigma = 0.66$), just like the testing data. \par
-We used the neural network architecture of TensorFlow's demonstration convolutional network for MNIST (ReLU non-linearities, two convolutional and pooling layers, convolutional filter size 5x5, stride 1, pooling size 2x2, one fully-connected layer with dropout, and a final readout fully-connected softmax layer). We trained the network using the Adam algorithm with the suggested parameters $\alpha = 0.001, \beta_1 = 0.9, \beta_2 = 0.999, \epsilon = 10^{-8}$, and a batch size of 50. Our results are computed over 100 random initilizations of the networks and generations of the dataset.\par
-We used three strategies for training the networks: non-curriculum training, where the data were presented in a random order ignoring the fact that some data were cleaner; curriculum training, where first the clean chunk was presented, then the light noise chunk, medium noise, and the remaining training examples; and active curriculum training by the above procedure, where the network was required to reach a running accuracy of 0.95 on the previous 4 batches to proceed to the next chunk.\par 
+We created a noisy version of the MNIST testing data by adding both binomial ($\theta = 0.66$) and gaussian ($\sigma=0.66$) noise to the MNIST images and clipping them to the range $[0,1]$. See \ref{noisymnist} for an example image. We left 200 training images clean, added a small amount of noise to 200 ($\theta = \sigma = 0.22$), and a medium amount of noise to another 200 ($\theta = \sigma = 0.44$). For the remaining training images we added heavy noise ($\theta = \sigma = 0.66$), just like the testing data. \par
+We used a neural network with two convolutional and pooling layers followed by two fully-connected layers with a softmax readout on the final one (non-linearities were ReLU, dropout before final layer). We trained the network for a single epoch using Adam ($\alpha = 0.001$). Our results are computed over 100 random data generations and initilizations of the networks (shared to improve comparison).\par 
+We used three strategies for training the networks: non-curriculum training, where the data were presented in a random order ignoring the fact that some data were cleaner; curriculum training, where first the clean chunk was presented, then the light noise chunk, medium noise, and the remaining training examples; and active curriculum training by the above procedure, where the network was required to reach a running accuracy of 0.95 on the previous 4 batches to proceed to the next chunk. (To make a fair comparison, the active network was constrained to see the same number of training batches as the other networks, so if it remained on an early chunk it would see correspondingly fewer examples from the final chunk.)\par 
 \subsection{Results}
-See \ref{accuracyfig} for the results. The network trained without a curriculum consistently performed poorly, with an average test accuracy of 22.1\%. The curriculum trained network performed much better on average, with an average test accuracy of 69.8\%, but performed worse than the standard training strategy on 13/100 trials. The network trained with an active curriculum performed better than either of the other networks, with an average test accuracy of 77.1\% (statistically significant improvement over the curriculum network, using a paired $t$-test $t(99) = 12.7$, $p = 2.2\cdot 10^{-16}$). Furthermore, on every trial the active curriculum network matched or exceeded the performance of the other two networks, and its performance was more consistent trial to trial.\par
-These results suggest that using active curriculum strategies to train neural networks may be a computationally cheap way to achieve better, more consistent results. 
+See \ref{accuracyfig} for the results. The network trained with no curriculum generally performed poorly, with an average test accuracy of 22.1\%. The network trained with a curriculum performed much better on average, with an average test accuracy of 69.8\%, but performed worse than the non-curriculum strategy on 13/100 trials. The network trained with an active curriculum performed better than either, with an average test accuracy of 77.1\% (statistically significant improvement over the curriculum alone using a paired $t$-test $t(99) = 12.7$, $p = 2.2\cdot 10^{-16}$). Furthermore, on every trial the active curriculum network matched or exceeded the performance of the other two networks, and its performance was more consistent trial to trial. We obtained qualitatively similar results when training for many epochs and selecting the network parameters by maximum validation accuracy (non-curriculum avg. 28.9\%, curriculum 77.7\%, active curriculum 82.0\%). These results suggest that active curriculum strategies may be an efficient way to extract more information from a training dataset. 
 %%\subsubsection*{Acknowledgments}
 %%
 %%Use unnumbered third level headings for the acknowledgments. All
