@@ -27,7 +27,7 @@ active_sample_test_period = 5 #how many samples between tests for moving to next
 active2tracklength = 30
 active2numtopass = 28 #Must get this many of the track correct to proceed
 
-#For active3 network and ahactive
+#For active3 network and activeah
 def score(x_relevant):
     return (1+numpy.sign(numpy.dot(score_weights,x_relevant)))/2.0
 
@@ -46,18 +46,20 @@ standard_error_track = [0]*naveragingtrials
 standard2_error_track = [0]*naveragingtrials
 active_error_track = [0]*naveragingtrials
 active2_error_track = [0]*naveragingtrials
-#active3_error_track = [0]*naveragingtrials
+active3_error_track = [0]*naveragingtrials
 activenc_error_track = [0]*naveragingtrials
-ahactive_error_track = [0]*naveragingtrials
+activeah_error_track = [0]*naveragingtrials
+ahcurr_error_track = [0]*naveragingtrials
 
 dot_track = [0]*naveragingtrials
 standard_dot_track = [0]*naveragingtrials
 standard2_dot_track = [0]*naveragingtrials
 active_dot_track = [0]*naveragingtrials
 active2_dot_track = [0]*naveragingtrials
-#active3_dot_track = [0]*naveragingtrials
+active3_dot_track = [0]*naveragingtrials
 activenc_dot_track = [0]*naveragingtrials
-ahactive_dot_track = [0]*naveragingtrials
+activeah_dot_track = [0]*naveragingtrials
+ahcurr_dot_track = [0]*naveragingtrials
 
 #time spent in easier trials vs. initial angle between hyperplanes
 active_initial_dot_track = [0]*naveragingtrials
@@ -71,24 +73,26 @@ standard_example_dot_track = numpy.zeros(nepochs*nsamples)
 curr_example_dot_track = numpy.zeros(nepochs*nsamples)
 active1_example_dot_track = numpy.zeros(nepochs*nsamples)
 active2_example_dot_track = numpy.zeros(nepochs*nsamples)
-#active3_example_dot_track = numpy.zeros(nepochs*nsamples)
+active3_example_dot_track = numpy.zeros(nepochs*nsamples)
 activenc_example_dot_track = numpy.zeros(nepochs*nsamples)
-ahactive_example_dot_track = numpy.zeros(nepochs*nsamples)
+activeah_example_dot_track = numpy.zeros(nepochs*nsamples)
+ahcurr_example_dot_track = numpy.zeros(nepochs*nsamples)
 
 #How do they progress?
 full_dot_track = numpy.zeros(nepochs*nsamples)
 curr_full_dot_track = numpy.zeros(nepochs*nsamples)
 active1_full_dot_track = numpy.zeros(nepochs*nsamples)
 active2_full_dot_track = numpy.zeros(nepochs*nsamples)
-#active3_full_dot_track = numpy.zeros(nepochs*nsamples)
+active3_full_dot_track = numpy.zeros(nepochs*nsamples)
 activenc_full_dot_track = numpy.zeros(nepochs*nsamples)
-ahactive_full_dot_track = numpy.zeros(nepochs*nsamples)
+activeah_full_dot_track = numpy.zeros(nepochs*nsamples)
+ahcurr_full_dot_track = numpy.zeros(nepochs*nsamples)
 
 for seed in xrange(naveragingtrials):
     print "On trial: "+str(seed)
     #seed = 1
-    tf.set_random_seed(seed+1) #attempt to be independent from previous test
-    numpy.random.seed(seed+1)
+    tf.set_random_seed(seed)
+    numpy.random.seed(seed)
     #data
     score_weights = numpy.random.randn(nrelevantdim)
     normed_weights = score_weights/numpy.linalg.norm(score_weights) #For weight angle computations
@@ -124,25 +128,28 @@ for seed in xrange(naveragingtrials):
     standard2_W1 = tf.Variable(W1.initialized_value())
     active_W1 =  tf.Variable(W1.initialized_value())
     active2_W1 =  tf.Variable(W1.initialized_value())
-#    active3_W1 =  tf.Variable(W1.initialized_value())
+    active3_W1 =  tf.Variable(W1.initialized_value())
     activenc_W1 =  tf.Variable(W1.initialized_value())
-    ahactive_W1 =  tf.Variable(W1.initialized_value())
+    activeah_W1 =  tf.Variable(W1.initialized_value())
+    ahcurr_W1 =  tf.Variable(W1.initialized_value())
     b1 = tf.Variable(tf.zeros([1,1]))
     standard_b1 = tf.Variable(b1.initialized_value())
     standard2_b1 = tf.Variable(b1.initialized_value())
     active_b1 = tf.Variable(b1.initialized_value())
     active2_b1 = tf.Variable(b1.initialized_value())
-#    active3_b1 = tf.Variable(b1.initialized_value())
+    active3_b1 = tf.Variable(b1.initialized_value())
     activenc_b1 = tf.Variable(b1.initialized_value())
-    ahactive_b1 = tf.Variable(b1.initialized_value())
+    activeah_b1 = tf.Variable(b1.initialized_value())
+    ahcurr_b1 = tf.Variable(b1.initialized_value())
     output = tf.nn.sigmoid(tf.matmul(W1,input_ph)+b1)
     standard_output = tf.nn.sigmoid(tf.matmul(standard_W1,input_ph)+standard_b1)
     standard2_output = tf.nn.sigmoid(tf.matmul(standard2_W1,input_ph)+standard2_b1)
     active_output = tf.nn.sigmoid(tf.matmul(active_W1,input_ph)+active_b1)
     active2_output = tf.nn.sigmoid(tf.matmul(active2_W1,input_ph)+active2_b1)
-#    active3_output = tf.nn.sigmoid(tf.matmul(active3_W1,input_ph)+active3_b1)
+    active3_output = tf.nn.sigmoid(tf.matmul(active3_W1,input_ph)+active3_b1)
     activenc_output = tf.nn.sigmoid(tf.matmul(activenc_W1,input_ph)+activenc_b1)
-    ahactive_output = tf.nn.sigmoid(tf.matmul(ahactive_W1,input_ph)+ahactive_b1)
+    activeah_output = tf.nn.sigmoid(tf.matmul(activeah_W1,input_ph)+activeah_b1)
+    ahcurr_output = tf.nn.sigmoid(tf.matmul(ahcurr_W1,input_ph)+ahcurr_b1)
 
     output_error = tf.square(output - target_ph)
     output_correct = (1.0-tf.sign((output-0.5)*(target_ph-0.5)))/2.0
@@ -170,20 +177,25 @@ for seed in xrange(naveragingtrials):
     active2_loss = tf.reduce_mean(active2_output_error)
     active2_train = optimizer.minimize(active2_loss)
 
-#    active3_output_error = tf.square(active3_output - target_ph)
-#    active3_output_correct = (1.0-tf.sign((active3_output-0.5)*(target_ph-0.5)))/2.0
-#    active3_loss = tf.reduce_mean(active3_output_error)
-#    active3_train = optimizer.minimize(active3_loss)
+    active3_output_error = tf.square(active3_output - target_ph)
+    active3_output_correct = (1.0-tf.sign((active3_output-0.5)*(target_ph-0.5)))/2.0
+    active3_loss = tf.reduce_mean(active3_output_error)
+    active3_train = optimizer.minimize(active3_loss)
 
     activenc_output_error = tf.square(activenc_output - target_ph)
     activenc_output_correct = (1.0-tf.sign((activenc_output-0.5)*(target_ph-0.5)))/2.0
     activenc_loss = tf.reduce_mean(activenc_output_error)
     activenc_train = optimizer.minimize(activenc_loss)
 
-    ahactive_output_error = tf.square(ahactive_output - target_ph)
-    ahactive_output_correct = (1.0-tf.sign((ahactive_output-0.5)*(target_ph-0.5)))/2.0
-    ahactive_loss = tf.reduce_mean(ahactive_output_error)
-    ahactive_train = optimizer.minimize(ahactive_loss)
+    ahcurr_output_error = tf.square(ahcurr_output - target_ph)
+    ahcurr_output_correct = (1.0-tf.sign((ahcurr_output-0.5)*(target_ph-0.5)))/2.0
+    ahcurr_loss = tf.reduce_mean(ahcurr_output_error)
+    ahcurr_train = optimizer.minimize(ahcurr_loss)
+
+    activeah_output_error = tf.square(activeah_output - target_ph)
+    activeah_output_correct = (1.0-tf.sign((activeah_output-0.5)*(target_ph-0.5)))/2.0
+    activeah_loss = tf.reduce_mean(activeah_output_error)
+    activeah_train = optimizer.minimize(activeah_loss)
 
     init = tf.initialize_all_variables()
 
@@ -191,7 +203,7 @@ for seed in xrange(naveragingtrials):
     sess = tf.Session()
     sess.run(init)
 
-    curr_AH_weights = sess.run(ahactive_W1)[0]
+    curr_AH_weights = sess.run(ahcurr_W1)[0]
     x_data_AH_easiness_indices = numpy.argsort(map(lambda x: numpy.abs(numpy.dot(curr_AH_weights,x)/(numpy.linalg.norm(curr_AH_weights)*numpy.linalg.norm(x))),x_data))
     AH_x_data = x_data[x_data_AH_easiness_indices] #Sort by distance from current boundary
     AH_y_data = numpy.array(map(lambda x: score(x[:nrelevantdim]),AH_x_data))
@@ -202,9 +214,10 @@ for seed in xrange(naveragingtrials):
 	standard_error = 0.0
 	active_error = 0.0
 	active2_error = 0.0
-#	active3_error = 0.0
+	active3_error = 0.0
 	activenc_error = 0.0
-	ahactive_error = 0.0
+	ahcurr_error = 0.0
+	activeah_error = 0.0
 	standard2_error = 0.0
 	for sample in xrange(ntestsamples):
 	    error += sess.run(output_correct,feed_dict={input_ph: test_x_data[sample].reshape([ndim,1]),target_ph: test_y_data[sample].reshape([1,1])})[0,0]
@@ -212,18 +225,20 @@ for seed in xrange(naveragingtrials):
 	    standard2_error += sess.run(standard2_output_correct,feed_dict={input_ph: test_x_data[sample].reshape([ndim,1]),target_ph: test_y_data[sample].reshape([1,1])})[0,0]
 	    active_error += sess.run(active_output_correct,feed_dict={input_ph: test_x_data[sample].reshape([ndim,1]),target_ph: test_y_data[sample].reshape([1,1])})[0,0]
 	    activenc_error += sess.run(activenc_output_correct,feed_dict={input_ph: test_x_data[sample].reshape([ndim,1]),target_ph: test_y_data[sample].reshape([1,1])})[0,0]
-	    ahactive_error += sess.run(ahactive_output_correct,feed_dict={input_ph: test_x_data[sample].reshape([ndim,1]),target_ph: test_y_data[sample].reshape([1,1])})[0,0]
+	    ahcurr_error += sess.run(ahcurr_output_correct,feed_dict={input_ph: test_x_data[sample].reshape([ndim,1]),target_ph: test_y_data[sample].reshape([1,1])})[0,0]
+	    activeah_error += sess.run(activeah_output_correct,feed_dict={input_ph: test_x_data[sample].reshape([ndim,1]),target_ph: test_y_data[sample].reshape([1,1])})[0,0]
 	    active2_error += sess.run(active2_output_correct,feed_dict={input_ph: test_x_data[sample].reshape([ndim,1]),target_ph: test_y_data[sample].reshape([1,1])})[0,0]
-#	    active3_error += sess.run(active3_output_correct,feed_dict={input_ph: test_x_data[sample].reshape([ndim,1]),target_ph: test_y_data[sample].reshape([1,1])})[0,0]
+	    active3_error += sess.run(active3_output_correct,feed_dict={input_ph: test_x_data[sample].reshape([ndim,1]),target_ph: test_y_data[sample].reshape([1,1])})[0,0]
 	error /= ntestsamples
 	standard_error /= ntestsamples
 	active_error /= ntestsamples
 	activenc_error /= ntestsamples
-	ahactive_error /= ntestsamples
+	activeah_error /= ntestsamples
+	ahcurr_error /= ntestsamples
 	active2_error /= ntestsamples
-#	active3_error /= ntestsamples
+	active3_error /= ntestsamples
 	standard2_error /= ntestsamples
-	return error,standard_error,active_error,active2_error,standard2_error,activenc_error,ahactive_error
+	return error,standard_error,active_error,active2_error,standard2_error,active3_error,activenc_error,ahcurr_error,activeah_error
 
 
     #active curriculum stuff
@@ -264,16 +279,30 @@ for seed in xrange(naveragingtrials):
 	active2_examples_seen[chunk] = active2_examples_seen[chunk]+1
 	return error,index
 
-#    #active3 curriculum stuff
-#    active3_unseen_example_track = range(nsamples)
-#    def show_active3_example():
-#	curr_weights = sess.run(active3_W1)
-#	#dists = map(lambda i: (1-numpy.dot(score_weights,sorted_x_data[i,:nrelevantdim])/(numpy.linalg.norm(score_weights)*numpy.linalg.norm(sorted_x_data[i,:nrelevantdim])))*numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[i])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[i]))),active3_unseen_example_track)			
-#	dists = map(lambda i: numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[i])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[i]))),active3_unseen_example_track)			
-#	index = active3_unseen_example_track.pop(numpy.argmin(dists))
-#	sess.run(active3_train,feed_dict={input_ph: sorted_x_data[index].reshape([ndim,1]),target_ph: sorted_y_data[index].reshape([1,1])}) 
-#	return index
-#
+    #active3 curriculum stuff
+    active3_unseen_example_track = range(nsamples)
+    def show_active3_example():
+	curr_weights = sess.run(active3_W1)
+	#dists = map(lambda i: (1-numpy.dot(score_weights,sorted_x_data[i,:nrelevantdim])/(numpy.linalg.norm(score_weights)*numpy.linalg.norm(sorted_x_data[i,:nrelevantdim])))*numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[i])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[i]))),active3_unseen_example_track)			
+	dists = map(lambda i: numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[i])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[i]))),active3_unseen_example_track)			
+	index = active3_unseen_example_track.pop(numpy.argmin(dists))
+	sess.run(active3_train,feed_dict={input_ph: sorted_x_data[index].reshape([ndim,1]),target_ph: sorted_y_data[index].reshape([1,1])}) 
+	return index
+
+    #activeah curriculum stuff
+    activeah_last_n = [0]*active2tracklength
+    activeah_chunks_passed = 0
+    activeah_examples_seen = [0]*nactivechunks
+    def show_activeah_example(chunk):
+	if activeah_examples_seen[chunk] < chunk_size:
+	    index = chunk_size*chunk+activeah_examples_seen[chunk]
+	else: #If all examples seen, just pick another at random
+	    index = numpy.random.randint(chunk_size*chunk,chunk_size*(chunk+1)) 
+	error = sess.run(activeah_output_correct,feed_dict={input_ph: AH_x_data[index].reshape([ndim,1]),target_ph: AH_y_data[index].reshape([1,1])}) 
+	sess.run(activeah_train,feed_dict={input_ph: AH_x_data[index].reshape([ndim,1]),target_ph: AH_y_data[index].reshape([1,1])}) #Could be more efficient than running these twice with a placeholder
+	activeah_examples_seen[chunk] = activeah_examples_seen[chunk]+1
+	return error,index
+
     def calculate_train_subset_error_rate(): 
 	"""Calculates error rates of the active network on this chunk"""
 	error = 0.0
@@ -295,8 +324,11 @@ for seed in xrange(naveragingtrials):
 	activenc_examples_seen = [0]*nactivechunks
 	active2_last_n = [0]*active2tracklength
 	active2_chunks_passed = 0
+	activeah_last_n = [0]*active2tracklength
+	activeah_chunks_passed = 0
 	active2_examples_seen = [0]*nactivechunks
-#	active3_unseen_example_track = range(nsamples)
+	activeah_examples_seen = [0]*nactivechunks
+	active3_unseen_example_track = range(nsamples)
 	for sample in xrange(nsamples):
 	    sess.run(train,feed_dict={input_ph: sorted_x_data[sample].reshape([ndim,1]),target_ph: sorted_y_data[sample].reshape([1,1])})
 	    curr_weights = sess.run(W1)
@@ -330,15 +362,24 @@ for seed in xrange(naveragingtrials):
 	    active2_last_n.append(1-this_a2_error)
 	    curr_weights = sess.run(active2_W1)
 	    active2_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
-#	    #Active3 training
-#	    a_index = show_active3_example()
-#	    curr_weights = sess.run(active3_W1)
-#	    active3_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
-	    #AHActive training
-	    sess.run(ahactive_train,feed_dict={input_ph: AH_x_data[sample].reshape([ndim,1]),target_ph: AH_y_data[sample].reshape([1,1])})
-	    curr_weights = sess.run(ahactive_W1)
-	    ahactive_example_dot_track[sample] += numpy.abs(numpy.dot(curr_weights[0],AH_x_data[sample])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(AH_x_data[sample])))
-
+	    #Active3 training
+	    a_index = show_active3_example()
+	    curr_weights = sess.run(active3_W1)
+	    active3_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
+	    #AHcurr training
+	    curr_weights = sess.run(ahcurr_W1)[0]
+	    sess.run(ahcurr_train,feed_dict={input_ph: AH_x_data[sample].reshape([ndim,1]),target_ph: AH_y_data[sample].reshape([1,1])})
+	    curr_weights = sess.run(ahcurr_W1)
+	    ahcurr_example_dot_track[sample] += numpy.abs(numpy.dot(curr_weights,AH_x_data[sample])/(numpy.linalg.norm(curr_weights)*numpy.linalg.norm(AH_x_data[sample])))
+	    #active AH training
+	    if (activeah_chunks_passed < nactivechunks-1) and (sum(activeah_last_n) >= active2numtopass or  (activeah_examples_seen[activeah_chunks_passed] > 0.5*nsamples)): 
+		activeah_chunks_passed += 1
+		activeah_last_n = [0]*active2tracklength
+	    this_aa_error,a_index = show_activeah_example(activeah_chunks_passed)
+	    activeah_last_n.pop(0)
+	    activeah_last_n.append(1-this_aa_error)
+	    curr_weights = sess.run(activeah_W1)
+	    activeah_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],AH_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(AH_x_data[a_index])))
 	    #Plot progression of weights
 	    these_weights = sess.run(standard_W1[0,:nrelevantdim])
 	    full_dot_track[sample+epoch*nsamples] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
@@ -348,12 +389,14 @@ for seed in xrange(naveragingtrials):
 	    active1_full_dot_track[sample+epoch*nsamples] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
 	    these_weights = sess.run(activenc_W1[0,:nrelevantdim])
 	    activenc_full_dot_track[sample+epoch*nsamples] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
-	    these_weights = sess.run(ahactive_W1[0,:nrelevantdim])
-	    ahactive_full_dot_track[sample+epoch*nsamples] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
+	    these_weights = sess.run(activeah_W1[0,:nrelevantdim])
+	    activeah_full_dot_track[sample+epoch*nsamples] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
+	    these_weights = sess.run(ahcurr_W1[0,:nrelevantdim])
+	    ahcurr_full_dot_track[sample+epoch*nsamples] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
 	    these_weights = sess.run(active2_W1[0,:nrelevantdim])
 	    active2_full_dot_track[sample+epoch*nsamples] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
-#	    these_weights = sess.run(active3_W1[0,:nrelevantdim])
-#	    active3_full_dot_track[sample+epoch*nsamples] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
+	    these_weights = sess.run(active3_W1[0,:nrelevantdim])
+	    active3_full_dot_track[sample+epoch*nsamples] +=  numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
 	    
 
     errors = calculate_error_rates()
@@ -362,9 +405,10 @@ for seed in xrange(naveragingtrials):
     active_error_track[seed] = errors[2]
     active2_error_track[seed] = errors[3]
     standard2_error_track[seed] = errors[4]
-#    active3_error_track[seed] = errors[5]
-    activenc_error_track[seed] = errors[5]
-    ahactive_error_track[seed] = errors[6]
+    active3_error_track[seed] = errors[5]
+    activenc_error_track[seed] = errors[6]
+    ahcurr_error_track[seed] = errors[7]
+    activeah_error_track[seed] = errors[8]
 
     #Weight angles
     these_weights = sess.run(standard_W1[0,:nrelevantdim])
@@ -375,32 +419,35 @@ for seed in xrange(naveragingtrials):
     active_dot_track[seed] = numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
     these_weights = sess.run(activenc_W1[0,:nrelevantdim])
     activenc_dot_track[seed] = numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
-    these_weights = sess.run(active2_W1[0,:nrelevantdim])
-    ahactive_dot_track[seed] = numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
+    these_weights = sess.run(ahcurr_W1[0,:nrelevantdim])
+    ahcurr_dot_track[seed] = numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
     these_weights = sess.run(active2_W1[0,:nrelevantdim])
     active2_dot_track[seed] = numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
     these_weights = sess.run(standard2_W1[0,:nrelevantdim])
     standard2_dot_track[seed] = numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
-#    these_weights = sess.run(active3_W1[0,:nrelevantdim])
-#    active3_dot_track[seed] = numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
+    these_weights = sess.run(active3_W1[0,:nrelevantdim])
+    active3_dot_track[seed] = numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
+    these_weights = sess.run(activeah_W1[0,:nrelevantdim])
+    activeah_dot_track[seed] = numpy.dot(these_weights/numpy.linalg.norm(these_weights),normed_weights)
 
     print("Active example counts: ", active_examples_seen)
     print("Active2 example counts: ", active2_examples_seen)
+    print("ActiveAH example counts: ", activeah_examples_seen)
     active_easy_examples_seen_track[seed] = active_examples_seen[0]+active_examples_seen[1]
     active2_easy_examples_seen_track[seed] = active2_examples_seen[0]+active2_examples_seen[1]
     sess.close()
     tf.reset_default_graph()
 
-print("Mean error rates (std. dev.): active curriculum = %f (%f), active2 curriculum = %f (%f), curriculum = %f (%f), non-curriculum = %f (%f), non-curriculum no hard examples = %f (%f), active non-curriculum = %f (%f), ad-hoc active %f (%f)" %(numpy.mean(active_error_track),numpy.std(active_error_track),numpy.mean(active2_error_track),numpy.std(active2_error_track),numpy.mean(error_track),numpy.std(error_track),numpy.mean(standard_error_track),numpy.std(standard_error_track),numpy.mean(standard2_error_track),numpy.std(standard2_error_track),numpy.mean(activenc_error_track),numpy.std(activenc_error_track),numpy.mean(ahactive_error_track),numpy.std(ahactive_error_track)))
+print("Mean error rates (std. dev.): active curriculum = %f (%f), active2 curriculum = %f (%f), curriculum = %f (%f), non-curriculum = %f (%f), non-curriculum no hard examples = %f (%f), active non-curriculum = %f (%f), ad-hoc curr %f (%f), ad-hoc active %f (%f)" %(numpy.mean(active_error_track),numpy.std(active_error_track),numpy.mean(active2_error_track),numpy.std(active2_error_track),numpy.mean(error_track),numpy.std(error_track),numpy.mean(standard_error_track),numpy.std(standard_error_track),numpy.mean(standard2_error_track),numpy.std(standard2_error_track),numpy.mean(activenc_error_track),numpy.std(activenc_error_track),numpy.mean(ahcurr_error_track),numpy.std(ahcurr_error_track),numpy.mean(activeah_error_track),numpy.std(activeah_error_track)))
 
-plot.hist([standard_error_track,error_track,active_error_track,active2_error_track,standard2_error_track,activenc_error_track,ahactive_error_track],histtype='bar')
+plot.hist([standard_error_track,error_track,active_error_track,active2_error_track,standard2_error_track,ahcurr_error_track,activeah_error_track],histtype='bar')
 plot.title("Error rates")
-plot.legend(['Non Curr.','Curr.','Act. Curr.','Act2. Curr.','NCNH','Act. NC','AH Act.'])
+plot.legend(['Non Curr.','Curr.','Act. Curr.','Act2. Curr.','NCNH','AH Curr.','AH Act.'])
 plot.show()
 
-plot.hist([standard_dot_track,dot_track,active_dot_track,active2_dot_track,standard2_dot_track,activenc_dot_track,ahactive_dot_track],histtype='bar')
+plot.hist([standard_dot_track,dot_track,active_dot_track,active2_dot_track,standard2_dot_track,ahcurr_dot_track,activeah_dot_track],histtype='bar')
 plot.title("Weight vec. dot values")
-plot.legend(['Non Curr.','Curr.','Act. Curr.','Act2. Curr.','NCNH','Act. NC','AH Act.'])
+plot.legend(['Non Curr.','Curr.','Act. Curr.','Act2. Curr.','NCNH','AH Curr.','AH Act.'])
 plot.show()
 
 #testing the relationship between initial angle and easy examples seen
@@ -422,17 +469,19 @@ full_dot_track /= naveragingtrials
 curr_full_dot_track /= naveragingtrials
 active1_full_dot_track /= naveragingtrials
 active2_full_dot_track /= naveragingtrials
-#active3_full_dot_track /= naveragingtrials
-activenc_full_dot_track /= naveragingtrials
-ahactive_full_dot_track /= naveragingtrials
+active3_full_dot_track /= naveragingtrials
+#activenc_full_dot_track /= naveragingtrials
+ahcurr_full_dot_track /= naveragingtrials
+activeah_full_dot_track /= naveragingtrials
 
 plot.plot(range(nsamples),full_dot_track,label='Standard')
 plot.plot(range(nsamples),curr_full_dot_track,label='Curriculum')
 plot.plot(range(nsamples),active1_full_dot_track,label='Act. 1')
 plot.plot(range(nsamples),active2_full_dot_track,label='Act. 2')
-#plot.plot(range(nsamples),active3_full_dot_track,label='Act. 3')
-plot.plot(range(nsamples),activenc_full_dot_track,label='Act. NC')
-plot.plot(range(nsamples),ahactive_full_dot_track,label='AH Act.')
+plot.plot(range(nsamples),active3_full_dot_track,label='Act. 3')
+#plot.plot(range(nsamples),activenc_full_dot_track,label='Act. NC')
+plot.plot(range(nsamples),ahcurr_full_dot_track,label='AH Curr.')
+plot.plot(range(nsamples),activeah_full_dot_track,label='AH Act.')
 plot.legend()
 plot.xlabel('examples seen')
 plot.ylabel('Weight vec. dot value')
@@ -443,16 +492,18 @@ standard_example_dot_track /= naveragingtrials
 curr_example_dot_track /= naveragingtrials
 active1_example_dot_track /= naveragingtrials
 active2_example_dot_track /= naveragingtrials
-#active3_example_dot_track /= naveragingtrials  
-activenc_example_dot_track /= naveragingtrials  
-ahactive_example_dot_track /= naveragingtrials  
+active3_example_dot_track /= naveragingtrials  
+#activenc_example_dot_track /= naveragingtrials  
+ahcurr_example_dot_track /= naveragingtrials  
+activeah_example_dot_track /= naveragingtrials  
 plot.plot(range(200),standard_example_dot_track,label='Non-Curr.')
 plot.plot(range(200),curr_example_dot_track,label='Curr.')
 plot.plot(range(200),active1_example_dot_track,label='active1')
 plot.plot(range(200),active2_example_dot_track,label='active2')
-#plot.plot(range(200),active3_example_dot_track,label='active3')
-plot.plot(range(200),activenc_example_dot_track,label='activenc')
-plot.plot(range(200),ahactive_example_dot_track,label='ahactive')
+plot.plot(range(200),active3_example_dot_track,label='active3')
+#plot.plot(range(200),activenc_example_dot_track,label='activenc')
+plot.plot(range(200),ahcurr_example_dot_track,label='ahcurr')
+plot.plot(range(200),activeah_example_dot_track,label='activeah')
 plot.legend()
 plot.xlabel('training example')
 plot.ylabel('example dot current weights')
