@@ -18,7 +18,7 @@ heavy_theta = 0.66
 batch_size = 50
 eta = 0.001
 
-naveragingtrials = 100
+naveragingtrials = 25
 
 total_training_set_size = 2000 # <= 55000, restrict data set size to make problem harder
 
@@ -183,21 +183,12 @@ for seed in xrange(naveragingtrials):
 	best_c_score = 0.0
 	best_ac_score = 0.0
 	for i in range(20000):
-	  i_mod = i % nbatches
-	  batch_x = mnist.train.images[standard_order[batch_size*i_mod:batch_size*(i_mod+1)]]
-	  batch_y = mnist.train.labels[standard_order[batch_size*i_mod:batch_size*(i_mod+1)]]
 	
-    #      if i%100 == 0:
-    #	train_accuracy = s_accuracy.eval(feed_dict={
-    #	    x:batch_x, y_: batch_y, keep_prob: 1.0})
-    #	print("step %d, standard training accuracy %g"%(i, train_accuracy))
-    #	train_accuracy = c_accuracy.eval(feed_dict={
-    #	    x:batch_x, y_: batch_y, keep_prob: 1.0})
-    #	print("step %d, curriculum training accuracy %g"%(i, train_accuracy))
-    #	train_accuracy = ac_accuracy.eval(feed_dict={
-    #	    x:batch_x, y_: batch_y, keep_prob: 1.0})
-    #	print("step %d, active curriculum training accuracy %g, on chunk %i"%(i, train_accuracy,ac_curr_chunk))
-	  s_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
+	  if training_round == 1:
+		  i_mod = i % nbatches
+		  batch_x = mnist.train.images[standard_order[batch_size*i_mod:batch_size*(i_mod+1)]]
+		  batch_y = mnist.train.labels[standard_order[batch_size*i_mod:batch_size*(i_mod+1)]]
+		  s_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
 	  #curriculum
 	  batch_x = mnist.train.images[c_order[batch_size*i_mod:batch_size*(i_mod+1)]]
 	  batch_y = mnist.train.labels[c_order[batch_size*i_mod:batch_size*(i_mod+1)]]
@@ -240,10 +231,11 @@ for seed in xrange(naveragingtrials):
 	    ac_ex_i = 0
 
 	  if i % 100 == 0:
-		this_val = s_accuracy.eval(feed_dict={x: mnist.validation.images, y_: mnist.validation.labels, keep_prob: 1.0})
-		if this_val > best_s_val:
-		    best_s_val = this_val
-		    best_s_score = s_accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
+		if training_round == 1:
+			this_val = s_accuracy.eval(feed_dict={x: mnist.validation.images, y_: mnist.validation.labels, keep_prob: 1.0})
+			if this_val > best_s_val:
+			    best_s_val = this_val
+			    best_s_score = s_accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
 
 		this_val = c_accuracy.eval(feed_dict={x: mnist.validation.images, y_: mnist.validation.labels, keep_prob: 1.0})
 		if this_val > best_c_val:
