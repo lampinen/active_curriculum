@@ -67,7 +67,6 @@ for seed in xrange(naveragingtrials):
 
 
     c_order = numpy.arange(len(mnist.train.images))
-    ac_order = numpy.arange(len(mnist.train.images))
     for training_round in [1,2]:
 	def weight_variable(shape):
 	  initial = tf.truncated_normal(shape, stddev=0.1)
@@ -110,6 +109,7 @@ for seed in xrange(naveragingtrials):
 	s_h_fc1_drop = tf.nn.dropout(s_h_fc1, keep_prob)
 	s_y_conv=tf.nn.softmax(tf.matmul(s_h_fc1_drop, s_W_fc2) + s_b_fc2)
 
+	s_individual_cross_entropy = -tf.reduce_sum(y_ * tf.log(s_y_conv),reduction_indices=[1])
 	s_cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(s_y_conv), reduction_indices=[1]))
 	s_train_step = tf.train.AdamOptimizer(eta).minimize(s_cross_entropy)
 	s_correct_prediction = tf.equal(tf.argmax(s_y_conv,1), tf.argmax(y_,1))
@@ -207,15 +207,15 @@ for seed in xrange(naveragingtrials):
     #    	batch_y = mnist.train.labels[offset:offset+batch_size]
 	  if ac_ex_i < batches_per_chunk or (ac_curr_chunk == 3 and ac_ex_i < batches_final_chunk):
 		offset = ac_curr_chunk*chunk_size+ac_ex_i*batch_size
-		batch_x = mnist.train.images[ac_order[offset:offset+batch_size]]
-		batch_y = mnist.train.labels[ac_order[offset:offset+batch_size]]
+		batch_x = mnist.train.images[c_order[offset:offset+batch_size]]
+		batch_y = mnist.train.labels[c_order[offset:offset+batch_size]]
 	  else: 
 		if ac_curr_chunk == 3:
 		    offset = ac_curr_chunk*chunk_size+numpy.random.randint(0,batches_final_chunk)*batch_size
 		else:
 		    offset = ac_curr_chunk*chunk_size+numpy.random.randint(0,batches_per_chunk)*batch_size
-		batch_x = mnist.train.images[ac_order[offset:offset+batch_size]]
-		batch_y = mnist.train.labels[ac_order[offset:offset+batch_size]]
+		batch_x = mnist.train.images[c_order[offset:offset+batch_size]]
+		batch_y = mnist.train.labels[c_order[offset:offset+batch_size]]
 	  ac_curr_accuracy = ac_accuracy.eval(feed_dict={
 	    x:batch_x, y_: batch_y, keep_prob: 0.5})
 	#  print("ac",ac_curr_chunk,ac_ex_i,offset,offset+batch_size,ac_curr_accuracy)
@@ -257,14 +257,11 @@ for seed in xrange(naveragingtrials):
 	    print("active curriculum 1 test accuracy %g"%ac1_scores[-1])
 	   
 	    c_order = []
-	    ac_order = []
 	    for i in xrange(len(mnist.train.labels)//batch_size):
 		batch_x = mnist.train.images[batch_size*i_mod:batch_size*(i_mod+1)]
 		batch_y = mnist.train.labels[batch_size*i_mod:batch_size*(i_mod+1)]
-		c_order.extend(sess.run(c_individual_cross_entropy,feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0}))
-		ac_order.extend(sess.run(ac_individual_cross_entropy,feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0}))
-	    c_order = numpy.argsort(c_order)
-	    ac_order = numpy.argsort(ac_order)
+		c_order.extend(sess.run(s_individual_cross_entropy,feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0}))
+	    c_order = numpy.argsort(c_order) #create a new curriculum
 	else:
 	    c2_scores.append(best_c_score)
 	    ac2_scores.append(best_ac_score)
