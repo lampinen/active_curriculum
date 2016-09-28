@@ -167,6 +167,20 @@ for seed in xrange(naveragingtrials):
     sess = tf.InteractiveSession()
     sess.run(tf.initialize_all_variables())
 
+    #c_order based on distance
+    def distance(outputs,targets):
+	abs_diff = lambda x: numpy.abs(x[0]-x[1])
+	return map(lambda i: abs_diff(numpy.partition(outputs[i],len(outputs[i])-1)[-2:]) if (numpy.argmax(outputs[i]) == numpy.argmax(targets[i])) else numpy.abs(outputs[i][numpy.argmax(targets[i])]-numpy.max(outputs[i])),range(len(outputs)))
+    
+    c_order = []
+    for i in xrange(len(mnist.train.labels)//batch_size):
+	batch_x = mnist.train.images[batch_size*i:batch_size*(i+1)]
+	batch_y = mnist.train.labels[batch_size*i:batch_size*(i+1)]
+	outputs = sess.run(s_y_conv,feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0})
+	c_order.extend(distance(outputs,batch_y))
+    c_order = numpy.argsort(c_order) #create a new curriculum
+
+
     #for i in range(total_training_set_size//batch_size):
     nbatches = total_training_set_size//batch_size
     best_s_val = 0.0
@@ -179,6 +193,7 @@ for seed in xrange(naveragingtrials):
       i_mod = i % nbatches
       batch_x = mnist.train.images[standard_order[batch_size*i_mod:batch_size*(i_mod+1)]]
       batch_y = mnist.train.labels[standard_order[batch_size*i_mod:batch_size*(i_mod+1)]]
+      
 #      if i%100 == 0:
 #	train_accuracy = s_accuracy.eval(feed_dict={
 #	    x:batch_x, y_: batch_y, keep_prob: 1.0})
@@ -189,10 +204,10 @@ for seed in xrange(naveragingtrials):
 #	train_accuracy = ac_accuracy.eval(feed_dict={
 #	    x:batch_x, y_: batch_y, keep_prob: 1.0})
 #	print("step %d, active curriculum training accuracy %g, on chunk %i"%(i, train_accuracy,ac_curr_chunk))
-      s_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0})
+      s_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
       #curriculum
-      batch_x = mnist.train.images[batch_size*i_mod:batch_size*(i_mod+1)]
-      batch_y = mnist.train.labels[batch_size*i_mod:batch_size*(i_mod+1)]
+      batch_x = mnist.train.images[c_order[batch_size*i_mod:batch_size*(i_mod+1)]]
+      batch_y = mnist.train.labels[c_order[batch_size*i_mod:batch_size*(i_mod+1)]]
     #  c_curr_accuracy = c_accuracy.eval(feed_dict={
     #    x:batch_x, y_: batch_y, keep_prob: 1.0}) 
     #  print("c",batch_size*i_mod,batch_size*(i_mod+1),c_curr_accuracy)
@@ -208,15 +223,15 @@ for seed in xrange(naveragingtrials):
 #    	batch_y = mnist.train.labels[offset:offset+batch_size]
       if ac_ex_i < batches_per_chunk or (ac_curr_chunk == 3 and ac_ex_i < batches_final_chunk):
 	    offset = ac_curr_chunk*chunk_size+ac_ex_i*batch_size
-	    batch_x = mnist.train.images[offset:offset+batch_size]
-	    batch_y = mnist.train.labels[offset:offset+batch_size]
+	    batch_x = mnist.train.images[c_order[offset:offset+batch_size]]
+	    batch_y = mnist.train.labels[c_order[offset:offset+batch_size]]
       else: 
 	    if ac_curr_chunk == 3:
 		offset = ac_curr_chunk*chunk_size+numpy.random.randint(0,batches_final_chunk)*batch_size
 	    else:
 		offset = ac_curr_chunk*chunk_size+numpy.random.randint(0,batches_per_chunk)*batch_size
-	    batch_x = mnist.train.images[offset:offset+batch_size]
-	    batch_y = mnist.train.labels[offset:offset+batch_size]
+	    batch_x = mnist.train.images[c_order[offset:offset+batch_size]]
+	    batch_y = mnist.train.labels[c_order[offset:offset+batch_size]]
       ac_curr_accuracy = ac_accuracy.eval(feed_dict={
 	x:batch_x, y_: batch_y, keep_prob: 0.5})
     #  print("ac",ac_curr_chunk,ac_ex_i,offset,offset+batch_size,ac_curr_accuracy)
