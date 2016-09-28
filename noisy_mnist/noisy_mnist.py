@@ -189,7 +189,7 @@ for seed in xrange(naveragingtrials):
 #	train_accuracy = ac_accuracy.eval(feed_dict={
 #	    x:batch_x, y_: batch_y, keep_prob: 1.0})
 #	print("step %d, active curriculum training accuracy %g, on chunk %i"%(i, train_accuracy,ac_curr_chunk))
-      s_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0})
+      s_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
       #curriculum
       batch_x = mnist.train.images[batch_size*i_mod:batch_size*(i_mod+1)]
       batch_y = mnist.train.labels[batch_size*i_mod:batch_size*(i_mod+1)]
