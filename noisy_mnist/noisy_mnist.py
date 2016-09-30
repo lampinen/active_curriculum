@@ -246,14 +246,13 @@ for seed in xrange(naveragingtrials):
 
 	    #Reorder
 
-	    i_end_sort = min(i_mod+100,nbatches)
 	    c_mini_order = []
-	    for i in xrange(i_mod,i_end_sort):
+	    for i in xrange(i_mod,nbatches):
 		batch_x = mnist.train.images[batch_size*i:batch_size*(i+1)]
 		batch_y = mnist.train.labels[batch_size*i:batch_size*(i+1)]
 		outputs = sess.run(s_y_conv,feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0})
 		c_mini_order.extend(distance(outputs,batch_y))
-	    c_order[batch_size*i_mod:batch_size*i_end_sort] = (c_order[batch_size*i_mod:batch_size*i_end_sort])[numpy.argsort(c_mini_order)] #create a new curriculum for the next segment
+	    c_order[batch_size*i_mod:batch_size*nbatches] = (c_order[batch_size*i_mod:batch_size*nbatches])[numpy.argsort(c_mini_order)] #create a new curriculum for the next segment
 
 
     s_scores.append(best_s_score)
