@@ -194,16 +194,6 @@ for seed in xrange(naveragingtrials):
       batch_x = mnist.train.images[standard_order[batch_size*i_mod:batch_size*(i_mod+1)]]
       batch_y = mnist.train.labels[standard_order[batch_size*i_mod:batch_size*(i_mod+1)]]
       
-#      if i%100 == 0:
-#	train_accuracy = s_accuracy.eval(feed_dict={
-#	    x:batch_x, y_: batch_y, keep_prob: 1.0})
-#	print("step %d, standard training accuracy %g"%(i, train_accuracy))
-#	train_accuracy = c_accuracy.eval(feed_dict={
-#	    x:batch_x, y_: batch_y, keep_prob: 1.0})
-#	print("step %d, curriculum training accuracy %g"%(i, train_accuracy))
-#	train_accuracy = ac_accuracy.eval(feed_dict={
-#	    x:batch_x, y_: batch_y, keep_prob: 1.0})
-#	print("step %d, active curriculum training accuracy %g, on chunk %i"%(i, train_accuracy,ac_curr_chunk))
       s_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
       #curriculum
       batch_x = mnist.train.images[c_order[batch_size*i_mod:batch_size*(i_mod+1)]]
@@ -213,14 +203,6 @@ for seed in xrange(naveragingtrials):
     #  print("c",batch_size*i_mod,batch_size*(i_mod+1),c_curr_accuracy)
       c_train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
       #active_curriculum
-#      if numpy.random.random() < 0.1: #Refresh earlier stuff 
-#    	this_chunk = 0 if (ac_curr_chunk == 0) else numpy.random.randint(0,ac_curr_chunk) 
-#    	if this_chunk < 3:
-#    	    offset = this_chunk*chunk_size+numpy.random.randint(0,batches_per_chunk)*batch_size
-#    	else:
-#    	    offset = this_chunk*chunk_size+numpy.random.randint(0,batches_final_chunk)*batch_size
-#    	batch_x = mnist.train.images[offset:offset+batch_size]
-#    	batch_y = mnist.train.labels[offset:offset+batch_size]
       if ac_ex_i < batches_per_chunk or (ac_curr_chunk == 3 and ac_ex_i < batches_final_chunk):
 	    offset = ac_curr_chunk*chunk_size+ac_ex_i*batch_size
 	    batch_x = mnist.train.images[c_order[offset:offset+batch_size]]
@@ -261,6 +243,17 @@ for seed in xrange(naveragingtrials):
 	    if this_val > best_ac_val:
 		best_ac_val = this_val
 		best_ac_score = ac_accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
+
+	    #Reorder
+
+	    i_end_sort = min(i_mod+100,nbatches)
+	    c_mini_order = []
+	    for i in xrange(i_mod,i_end_sort):
+		batch_x = mnist.train.images[batch_size*i:batch_size*(i+1)]
+		batch_y = mnist.train.labels[batch_size*i:batch_size*(i+1)]
+		outputs = sess.run(s_y_conv,feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0})
+		c_mini_order.extend(distance(outputs,batch_y))
+	    c_order[batch_size*i_mod:batch_size*i_end_sort] = (c_order[batch_size*i_mod:batch_size*i_end_sort])[numpy.argsort(c_mini_order)] #create a new curriculum for the next segment
 
 
     s_scores.append(best_s_score)
