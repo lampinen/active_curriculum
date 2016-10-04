@@ -1,6 +1,6 @@
 import numpy
 import tensorflow as tf
-import matplotlib.pyplot as plot
+#import matplotlib.pyplot as plot
 from tensorflow.examples.tutorials.mnist import input_data
 
 #Code edited from tensorflow's tutorial
@@ -170,7 +170,7 @@ for seed in xrange(naveragingtrials):
     #c_order based on distance
     def distance(outputs,targets):
 	abs_diff = lambda x: numpy.abs(x[0]-x[1])
-	return map(lambda i: abs_diff(numpy.partition(outputs[i],len(outputs[i])-1)[-2:]) if (numpy.argmax(outputs[i]) == numpy.argmax(targets[i])) else numpy.abs(outputs[i][numpy.argmax(targets[i])]-numpy.max(outputs[i])),range(len(outputs)))
+	return map(lambda i: numpy.inf if (numpy.argmax(outputs[i]) == numpy.argmax(targets[i])) else numpy.abs(outputs[i][numpy.argmax(targets[i])]-numpy.max(outputs[i])),range(len(outputs)))
     
     c_order = []
     for i in xrange(len(mnist.train.labels)//batch_size):
