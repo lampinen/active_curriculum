@@ -10,7 +10,7 @@ ndim = 60
 nrelevantdim = 50
 nsamples = 200
 ntestsamples = 1000
-naveragingtrials = 500
+naveragingtrials = 100
 nepochs=1
 
 
@@ -40,6 +40,19 @@ def random_mask(n):
     mask = numpy.array([0.0]*n+[1.0]*(ndim-(nrelevantdim+n)))
     numpy.random.shuffle(mask)
     return mask
+
+#For ad hoc curriculum
+def interleave(X,Y):
+    X = list(X)
+    Y = list(Y)
+    return_list = numpy.zeros(len(X)+len(Y))
+    for i in xrange(len(return_list)):
+	if (i%2 == 0 and len(X) != 0) or len(Y) == 0:
+	    return_list[i] = X.pop()
+	else:
+	    return_list[i] = Y.pop()
+    return return_list
+    
 
 error_track = [0]*naveragingtrials
 standard_error_track = [0]*naveragingtrials
@@ -102,7 +115,7 @@ for seed in xrange(naveragingtrials):
 
     x_data_easiness_indices = numpy.argsort(map(lambda x: easiness(x),x_data))
     sorted_x_data = x_data[x_data_easiness_indices] #Sort by easiness
-    standard2_x_data = numpy.concatenate((sorted_x_data[:150],sorted_x_data[:50]),0) 
+    standard2_x_data = numpy.concatenate((sorted_x_data[:numpy.floor(nsamples*0.75)],sorted_x_data[:(nsamples-numpy.floor(nsamples*0.75))]),0) 
     numpy.random.shuffle(standard2_x_data)
 
     y_data = numpy.array(map(lambda x: score(x[:nrelevantdim]),x_data))
@@ -119,6 +132,24 @@ for seed in xrange(naveragingtrials):
     test_x_data[:,nrelevantdim:] = test_x_data[:,nrelevantdim:]*test_data_mask
     test_y_data = numpy.array(map(lambda x: score(x[:nrelevantdim]),test_x_data))
     test_y_data = test_y_data.reshape([ntestsamples,1])
+
+    #ad hoc
+    positive_examples = (y_data == 1).flatten()
+    negative_examples = (y_data != 1).flatten()
+    def combine(data):
+	return numpy.sum(data,0).reshape(1,-1) 
+    
+	
+    AH_x_data = numpy.concatenate((combine(x_data[positive_examples]),combine(x_data[negative_examples])))
+    for i in xrange(10):
+	AH_x_data = numpy.concatenate((AH_x_data,combine( numpy.random.permutation(x_data[positive_examples])[:10] ))) 
+	AH_x_data = numpy.concatenate((AH_x_data,combine( numpy.random.permutation(x_data[negative_examples])[:10] ))) 
+    for i in xrange(10):
+	AH_x_data = numpy.concatenate((AH_x_data,combine( numpy.random.permutation(x_data[positive_examples])[:5] ))) 
+	AH_x_data = numpy.concatenate((AH_x_data,combine( numpy.random.permutation(x_data[negative_examples])[:5] ))) 
+    AH_x_data = numpy.concatenate((AH_x_data, x_data[:200-len(AH_x_data)])) #fill rest with regular examples
+    AH_y_data = numpy.array(map(lambda x: score(x[:nrelevantdim]),AH_x_data))
+    AH_y_data = AH_y_data.reshape([nsamples,1])
 
     #network definitions
     input_ph = tf.placeholder(tf.float32, shape=[ndim,1])
@@ -203,11 +234,11 @@ for seed in xrange(naveragingtrials):
     sess = tf.Session()
     sess.run(init)
 
-    curr_AH_weights = sess.run(ahcurr_W1)[0]
-    x_data_AH_easiness_indices = numpy.argsort(map(lambda x: numpy.abs(numpy.dot(curr_AH_weights,x)/(numpy.linalg.norm(curr_AH_weights)*numpy.linalg.norm(x))),x_data))
-    AH_x_data = x_data[x_data_AH_easiness_indices] #Sort by distance from current boundary
-    AH_y_data = numpy.array(map(lambda x: score(x[:nrelevantdim]),AH_x_data))
-    AH_y_data = AH_y_data.reshape([nsamples,1])
+#    curr_AH_weights = sess.run(ahcurr_W1)[0]
+#    x_data_AH_easiness_indices = numpy.argsort(map(lambda x: numpy.abs(numpy.dot(curr_AH_weights,x)/(numpy.linalg.norm(curr_AH_weights)*numpy.linalg.norm(x))),x_data))
+#    AH_x_data = x_data[x_data_AH_easiness_indices] #Sort by distance from current boundary
+#    AH_y_data = numpy.array(map(lambda x: score(x[:nrelevantdim]),AH_x_data))
+#    AH_y_data = AH_y_data.reshape([nsamples,1])
 
     def calculate_error_rates():
 	error = 0.0
@@ -496,14 +527,14 @@ active3_example_dot_track /= naveragingtrials
 #activenc_example_dot_track /= naveragingtrials  
 ahcurr_example_dot_track /= naveragingtrials  
 activeah_example_dot_track /= naveragingtrials  
-plot.plot(range(200),standard_example_dot_track,label='Non-Curr.')
-plot.plot(range(200),curr_example_dot_track,label='Curr.')
-plot.plot(range(200),active1_example_dot_track,label='active1')
-plot.plot(range(200),active2_example_dot_track,label='active2')
-plot.plot(range(200),active3_example_dot_track,label='active3')
-#plot.plot(range(200),activenc_example_dot_track,label='activenc')
-plot.plot(range(200),ahcurr_example_dot_track,label='ahcurr')
-plot.plot(range(200),activeah_example_dot_track,label='activeah')
+plot.plot(range(nsamples),standard_example_dot_track,label='Non-Curr.')
+plot.plot(range(nsamples),curr_example_dot_track,label='Curr.')
+plot.plot(range(nsamples),active1_example_dot_track,label='active1')
+plot.plot(range(nsamples),active2_example_dot_track,label='active2')
+plot.plot(range(nsamples),active3_example_dot_track,label='active3')
+#plot.plot(range(nsamples),activenc_example_dot_track,label='activenc')
+plot.plot(range(nsamples),ahcurr_example_dot_track,label='ahcurr')
+plot.plot(range(nsamples),activeah_example_dot_track,label='activeah')
 plot.legend()
 plot.xlabel('training example')
 plot.ylabel('example dot current weights')
