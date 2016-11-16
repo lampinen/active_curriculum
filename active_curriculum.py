@@ -10,7 +10,7 @@ ndim = 60
 nrelevantdim = 50
 nsamples = 200
 ntestsamples = 1000
-naveragingtrials = 500
+naveragingtrials = 5
 nepochs=1
 
 
@@ -204,8 +204,8 @@ for seed in xrange(naveragingtrials):
     sess.run(init)
 
     curr_AH_weights = sess.run(ahcurr_W1)[0]
-    x_data_AH_easiness_indices = numpy.argsort(map(lambda x: numpy.abs(numpy.dot(curr_AH_weights,x)/(numpy.linalg.norm(curr_AH_weights)*numpy.linalg.norm(x))),x_data))
-    AH_x_data = x_data[x_data_AH_easiness_indices] #Sort by distance from current boundary
+    x_data_AH_easiness_indices = numpy.argsort(map(lambda x: score(x[:nrelevantdim])*numpy.dot(curr_AH_weights,x),x_data))  
+    AH_x_data = x_data[x_data_AH_easiness_indices] #Sort by margin from current boundary
     AH_y_data = numpy.array(map(lambda x: score(x[:nrelevantdim]),AH_x_data))
     AH_y_data = AH_y_data.reshape([nsamples,1])
 
@@ -440,6 +440,10 @@ for seed in xrange(naveragingtrials):
 
 print("Mean error rates (std. dev.): active curriculum = %f (%f), active2 curriculum = %f (%f), curriculum = %f (%f), non-curriculum = %f (%f), non-curriculum no hard examples = %f (%f), active non-curriculum = %f (%f), ad-hoc curr %f (%f), ad-hoc active %f (%f)" %(numpy.mean(active_error_track),numpy.std(active_error_track),numpy.mean(active2_error_track),numpy.std(active2_error_track),numpy.mean(error_track),numpy.std(error_track),numpy.mean(standard_error_track),numpy.std(standard_error_track),numpy.mean(standard2_error_track),numpy.std(standard2_error_track),numpy.mean(activenc_error_track),numpy.std(activenc_error_track),numpy.mean(ahcurr_error_track),numpy.std(ahcurr_error_track),numpy.mean(activeah_error_track),numpy.std(activeah_error_track)))
 
+numpy.savetxt('s_final_error_AH_on_previous.csv',full_error_track,delimiter=',')
+numpy.savetxt('c_final_error_AH_on_previous.csv',curr_full_error_track,delimiter=',')
+numpy.savetxt('ah_final_error_AH_on_previous.csv',ahcurr_full_error_track,delimiter=',')
+
 plot.hist([standard_error_track,error_track,active_error_track,active2_error_track,standard2_error_track,ahcurr_error_track,activeah_error_track],histtype='bar')
 plot.title("Error rates")
 plot.legend(['Non Curr.','Curr.','Act. Curr.','Act2. Curr.','NCNH','AH Curr.','AH Act.'])
@@ -473,6 +477,11 @@ active3_full_dot_track /= naveragingtrials
 #activenc_full_dot_track /= naveragingtrials
 ahcurr_full_dot_track /= naveragingtrials
 activeah_full_dot_track /= naveragingtrials
+
+numpy.savetxt('s_dot_track_AH_on_previous.csv',full_dot_track,delimiter=',')
+numpy.savetxt('c_dot_track_AH_on_previous.csv',curr_full_dot_track,delimiter=',')
+numpy.savetxt('ah_dot_track_AH_on_previous.csv',ahcurr_full_dot_track,delimiter=',')
+
 
 plot.plot(range(nsamples),full_dot_track,label='Standard')
 plot.plot(range(nsamples),curr_full_dot_track,label='Curriculum')
