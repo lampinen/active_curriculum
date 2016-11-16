@@ -137,7 +137,7 @@ for seed in xrange(naveragingtrials):
     positive_examples = (y_data == 1).flatten()
     negative_examples = (y_data != 1).flatten()
     def combine(data):
-	return numpy.sum(data,0).reshape(1,-1) 
+	return numpy.mean(data,0).reshape(1,-1) 
     
 	
     AH_x_data = numpy.concatenate((combine(x_data[positive_examples]),combine(x_data[negative_examples])))
@@ -471,14 +471,18 @@ for seed in xrange(naveragingtrials):
 
 print("Mean error rates (std. dev.): active curriculum = %f (%f), active2 curriculum = %f (%f), curriculum = %f (%f), non-curriculum = %f (%f), non-curriculum no hard examples = %f (%f), active non-curriculum = %f (%f), ad-hoc curr %f (%f), ad-hoc active %f (%f)" %(numpy.mean(active_error_track),numpy.std(active_error_track),numpy.mean(active2_error_track),numpy.std(active2_error_track),numpy.mean(error_track),numpy.std(error_track),numpy.mean(standard_error_track),numpy.std(standard_error_track),numpy.mean(standard2_error_track),numpy.std(standard2_error_track),numpy.mean(activenc_error_track),numpy.std(activenc_error_track),numpy.mean(ahcurr_error_track),numpy.std(ahcurr_error_track),numpy.mean(activeah_error_track),numpy.std(activeah_error_track)))
 
-plot.hist([standard_error_track,error_track,active_error_track,active2_error_track,standard2_error_track,ahcurr_error_track,activeah_error_track],histtype='bar')
+#plot.hist([standard_error_track,error_track,active_error_track,active2_error_track,standard2_error_track,ahcurr_error_track,activeah_error_track],histtype='bar')
+plot.hist([standard_error_track,error_track,ahcurr_error_track],histtype='bar')
 plot.title("Error rates")
-plot.legend(['Non Curr.','Curr.','Act. Curr.','Act2. Curr.','NCNH','AH Curr.','AH Act.'])
+#plot.legend(['Non Curr.','Curr.','Act. Curr.','Act2. Curr.','NCNH','AH Curr.','AH Act.'])
+plot.legend(['Non Curr.','Curr.''AH Curr.'])
 plot.show()
 
-plot.hist([standard_dot_track,dot_track,active_dot_track,active2_dot_track,standard2_dot_track,ahcurr_dot_track,activeah_dot_track],histtype='bar')
+#plot.hist([standard_dot_track,dot_track,active_dot_track,active2_dot_track,standard2_dot_track,ahcurr_dot_track,activeah_dot_track],histtype='bar')
+plot.hist([standard_dot_track,dot_track,ahcurr_dot_track],histtype='bar')
 plot.title("Weight vec. dot values")
-plot.legend(['Non Curr.','Curr.','Act. Curr.','Act2. Curr.','NCNH','AH Curr.','AH Act.'])
+#plot.legend(['Non Curr.','Curr.','Act. Curr.','Act2. Curr.','NCNH','AH Curr.','AH Act.'])
+plot.legend(['Non Curr.','Curr.','AH Curr.'])
 plot.show()
 
 #testing the relationship between initial angle and easy examples seen
@@ -507,12 +511,12 @@ activeah_full_dot_track /= naveragingtrials
 
 plot.plot(range(nsamples),full_dot_track,label='Standard')
 plot.plot(range(nsamples),curr_full_dot_track,label='Curriculum')
-plot.plot(range(nsamples),active1_full_dot_track,label='Act. 1')
-plot.plot(range(nsamples),active2_full_dot_track,label='Act. 2')
-plot.plot(range(nsamples),active3_full_dot_track,label='Act. 3')
+#plot.plot(range(nsamples),active1_full_dot_track,label='Act. 1')
+#plot.plot(range(nsamples),active2_full_dot_track,label='Act. 2')
+#plot.plot(range(nsamples),active3_full_dot_track,label='Act. 3')
 #plot.plot(range(nsamples),activenc_full_dot_track,label='Act. NC')
 plot.plot(range(nsamples),ahcurr_full_dot_track,label='AH Curr.')
-plot.plot(range(nsamples),activeah_full_dot_track,label='AH Act.')
+#plot.plot(range(nsamples),activeah_full_dot_track,label='AH Act.')
 plot.legend()
 plot.xlabel('examples seen')
 plot.ylabel('Weight vec. dot value')
@@ -529,12 +533,12 @@ ahcurr_example_dot_track /= naveragingtrials
 activeah_example_dot_track /= naveragingtrials  
 plot.plot(range(nsamples),standard_example_dot_track,label='Non-Curr.')
 plot.plot(range(nsamples),curr_example_dot_track,label='Curr.')
-plot.plot(range(nsamples),active1_example_dot_track,label='active1')
-plot.plot(range(nsamples),active2_example_dot_track,label='active2')
-plot.plot(range(nsamples),active3_example_dot_track,label='active3')
+#plot.plot(range(nsamples),active1_example_dot_track,label='active1')
+#plot.plot(range(nsamples),active2_example_dot_track,label='active2')
+#plot.plot(range(nsamples),active3_example_dot_track,label='active3')
 #plot.plot(range(nsamples),activenc_example_dot_track,label='activenc')
-plot.plot(range(nsamples),ahcurr_example_dot_track,label='ahcurr')
-plot.plot(range(nsamples),activeah_example_dot_track,label='activeah')
+plot.plot(range(nsamples),ahcurr_example_dot_track,label='AH Curr')
+#plot.plot(range(nsamples),activeah_example_dot_track,label='activeah')
 plot.legend()
 plot.xlabel('training example')
 plot.ylabel('example dot current weights')
