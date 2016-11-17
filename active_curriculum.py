@@ -10,7 +10,7 @@ ndim = 60
 nrelevantdim = 50
 nsamples = 200
 ntestsamples = 1000
-naveragingtrials = 5
+naveragingtrials = 100
 nepochs=1
 
 
@@ -205,7 +205,7 @@ for seed in xrange(naveragingtrials):
 
     curr_AH_weights = sess.run(ahcurr_W1)[0]
     x_data_AH_easiness_indices = numpy.argsort(map(lambda x: score(x[:nrelevantdim])*numpy.dot(curr_AH_weights,x),x_data))  
-    AH_x_data = x_data[x_data_AH_easiness_indices] #Sort by margin from current boundary
+    AH_x_data = x_data[x_data_AH_easiness_indices[::-1]] #Sort by (reversed) margin from current boundary
     AH_y_data = numpy.array(map(lambda x: score(x[:nrelevantdim]),AH_x_data))
     AH_y_data = AH_y_data.reshape([nsamples,1])
 
@@ -337,35 +337,35 @@ for seed in xrange(naveragingtrials):
 	    curr_weights = sess.run(standard_W1)
 	    standard_example_dot_track[sample] += numpy.abs(numpy.dot(curr_weights[0],x_data[sample])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(x_data[sample])))
 	    sess.run(standard2_train,feed_dict={input_ph: standard2_x_data[sample].reshape([ndim,1]),target_ph: standard2_y_data[sample].reshape([1,1])})
-	    #Active training
-	    if (active_chunks_passed < nactivechunks-1) and (sample % active_sample_test_period == 0): 
-		active_error = calculate_train_subset_error_rate()
-		if active_error < active_error_threshold or (active_examples_seen[active_chunks_passed] > 0.5*nsamples):
-		    active_chunks_passed += 1
-	    a_index = show_active_example(active_chunks_passed)
-	    curr_weights = sess.run(active_W1)
-	    active1_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
-	    #Activenc training
-	    if (activenc_chunks_passed < nactivechunks-1) and (sample % active_sample_test_period == 0): 
-		activenc_error = calculate_train_subset_error_rate()
-		if activenc_error < active_error_threshold or (activenc_examples_seen[activenc_chunks_passed] > 0.5*nsamples):
-		    activenc_chunks_passed += 1
-	    a_index = show_activenc_example(activenc_chunks_passed)
-	    curr_weights = sess.run(activenc_W1)
-	    activenc_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
-	    #Active2 training
-	    if  (active2_chunks_passed < nactivechunks-1) and (sum(active2_last_n) >= active2numtopass or  (active2_examples_seen[active2_chunks_passed] > 0.5*nsamples)): 
-		active2_chunks_passed += 1
-		active2_last_n = [0]*active2tracklength
-	    this_a2_error,a_index = show_active2_example(active2_chunks_passed)
-	    active2_last_n.pop(0)
-	    active2_last_n.append(1-this_a2_error)
-	    curr_weights = sess.run(active2_W1)
-	    active2_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
-	    #Active3 training
-	    a_index = show_active3_example()
-	    curr_weights = sess.run(active3_W1)
-	    active3_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
+#	    #Active training
+#	    if (active_chunks_passed < nactivechunks-1) and (sample % active_sample_test_period == 0): 
+#		active_error = calculate_train_subset_error_rate()
+#		if active_error < active_error_threshold or (active_examples_seen[active_chunks_passed] > 0.5*nsamples):
+#		    active_chunks_passed += 1
+#	    a_index = show_active_example(active_chunks_passed)
+#	    curr_weights = sess.run(active_W1)
+#	    active1_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
+#	    #Activenc training
+#	    if (activenc_chunks_passed < nactivechunks-1) and (sample % active_sample_test_period == 0): 
+#		activenc_error = calculate_train_subset_error_rate()
+#		if activenc_error < active_error_threshold or (activenc_examples_seen[activenc_chunks_passed] > 0.5*nsamples):
+#		    activenc_chunks_passed += 1
+#	    a_index = show_activenc_example(activenc_chunks_passed)
+#	    curr_weights = sess.run(activenc_W1)
+#	    activenc_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
+#	    #Active2 training
+#	    if  (active2_chunks_passed < nactivechunks-1) and (sum(active2_last_n) >= active2numtopass or  (active2_examples_seen[active2_chunks_passed] > 0.5*nsamples)): 
+#		active2_chunks_passed += 1
+#		active2_last_n = [0]*active2tracklength
+#	    this_a2_error,a_index = show_active2_example(active2_chunks_passed)
+#	    active2_last_n.pop(0)
+#	    active2_last_n.append(1-this_a2_error)
+#	    curr_weights = sess.run(active2_W1)
+#	    active2_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
+#	    #Active3 training
+#	    a_index = show_active3_example()
+#	    curr_weights = sess.run(active3_W1)
+#	    active3_example_dot_track[sample+epoch*nsamples] += numpy.abs(numpy.dot(curr_weights[0],sorted_x_data[a_index])/(numpy.linalg.norm(curr_weights[0])*numpy.linalg.norm(sorted_x_data[a_index])))
 	    #AHcurr training
 	    curr_weights = sess.run(ahcurr_W1)[0]
 	    sess.run(ahcurr_train,feed_dict={input_ph: AH_x_data[sample].reshape([ndim,1]),target_ph: AH_y_data[sample].reshape([1,1])})
@@ -440,9 +440,9 @@ for seed in xrange(naveragingtrials):
 
 print("Mean error rates (std. dev.): active curriculum = %f (%f), active2 curriculum = %f (%f), curriculum = %f (%f), non-curriculum = %f (%f), non-curriculum no hard examples = %f (%f), active non-curriculum = %f (%f), ad-hoc curr %f (%f), ad-hoc active %f (%f)" %(numpy.mean(active_error_track),numpy.std(active_error_track),numpy.mean(active2_error_track),numpy.std(active2_error_track),numpy.mean(error_track),numpy.std(error_track),numpy.mean(standard_error_track),numpy.std(standard_error_track),numpy.mean(standard2_error_track),numpy.std(standard2_error_track),numpy.mean(activenc_error_track),numpy.std(activenc_error_track),numpy.mean(ahcurr_error_track),numpy.std(ahcurr_error_track),numpy.mean(activeah_error_track),numpy.std(activeah_error_track)))
 
-numpy.savetxt('s_final_error_AH_on_previous.csv',full_error_track,delimiter=',')
-numpy.savetxt('c_final_error_AH_on_previous.csv',curr_full_error_track,delimiter=',')
-numpy.savetxt('ah_final_error_AH_on_previous.csv',ahcurr_full_error_track,delimiter=',')
+numpy.savetxt('s_final_error_AH_on_previous.csv',standard_error_track,delimiter=',')
+numpy.savetxt('c_final_error_AH_on_previous.csv',error_track,delimiter=',')
+numpy.savetxt('ah_final_error_AH_on_previous.csv',ahcurr_error_track,delimiter=',')
 
 plot.hist([standard_error_track,error_track,active_error_track,active2_error_track,standard2_error_track,ahcurr_error_track,activeah_error_track],histtype='bar')
 plot.title("Error rates")
